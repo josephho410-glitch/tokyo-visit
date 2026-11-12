@@ -47,3 +47,15 @@
 .photo-dialog img{display:block;max-width:100%;width:auto;max-height:65dvh;object-fit:contain;margin:10px auto}
 .photo-dialog .actions{justify-content:center}
 @media(min-width:600px){.photo-album{grid-template-columns:repeat(5,minmax(0,1fr))}}
+
+/* V2.7 integrated restaurant filters and souvenir goals */
+.food-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0 9px}
+.food-filters .btn{font-size:12px;min-width:0;white-space:nowrap;padding:7px 3px;min-height:38px}
+.shopping-entry{border-bottom:1px solid #edf1f4;padding:11px 0;display:grid;gap:7px}
+.shopping-entry:last-child{border-bottom:0}
+.shopping-entry-main{display:flex;align-items:flex-start;gap:10px;line-height:1.5;word-break:break-word}
+.shopping-entry-actions{display:flex;justify-content:flex-end;gap:6px;flex-wrap:wrap;margin-left:31px}
+.shopping-entry-actions .btn{min-height:31px}
+.gift-summary{margin-top:13px;display:flex;flex-wrap:wrap;gap:8px}
+.gift-summary span{border:1px solid #e1eaf0;background:#f6f9fb;border-radius:9px;padding:7px 10px;color:#415d74;font-size:12px}
+@media(max-width:370px){.shopping-entry-actions .btn{font-size:11px;padding:5px 6px}}

@@ -1,7 +1,7 @@
 /* 2026/11/12 行程：來源為專案《日本參訪行程表.txt》；正式集合依 11/10 更新通知。
  * 未經重新查核之交通時刻、活動營業時間，皆標示為預估／待確認。
  */
-const SEED_REV='2026-11-12-db23-venues7-r5';
+const SEED_REV='2026-11-12-db23-venues7-r6';
 const TRIP_DATES=['2026-11-15','2026-11-16','2026-11-17','2026-11-18','2026-11-19','2026-11-20','2026-11-21'];
 const WEEK=['日','一','二','三','四','五','六'];
 const E=(id,day,time,title,kind,place,detail,rest={})=>({id,day,time,title,kind,place,detail,timezone:'Asia/Tokyo',status:kind==='official'?'confirmed':'planned',...rest});
