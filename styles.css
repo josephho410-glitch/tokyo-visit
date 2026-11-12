@@ -18,3 +18,32 @@
 .mini-note{font-size:12px;color:#788b9d;line-height:1.6}
 .gift-check{display:flex;gap:9px;align-items:center;margin-top:12px;font-weight:670;color:#264b65}
 @media(max-width:390px){.rec-item .actions .btn{font-size:11px;padding:7px 9px}}
+
+/* V2.5: grouped stores and item checkboxes */
+.gift-products,.legacy-more{margin-top:13px;border:1px solid #dfe7ee;border-radius:11px;background:#fbfcfe;overflow:hidden}
+.gift-products summary,.legacy-more summary{cursor:pointer;padding:12px 13px;color:#244e70;font-size:13px;font-weight:750;list-style-position:inside}
+.gift-products[open] summary,.legacy-more[open] summary{border-bottom:1px solid #e3ebf1}
+.gift-product{padding:12px 14px;border-bottom:1px solid #ebf0f4}
+.gift-product:last-child{border-bottom:none}
+.gift-product-name{font-size:14px;font-weight:730;line-height:1.5}
+.gift-product .gift-check{margin-top:8px;font-size:12px}
+.gift-products .rec-text{margin:4px 0}
+.legacy-more .rec-item{padding-left:12px;padding-right:12px}
+
+/* V2.6 local photos: compact previews and large-screen receipt inspection. */
+.photo-block{margin-top:12px;border-top:1px dashed #dce5ee;padding-top:8px}
+.photo-actions{margin:4px 0 8px}
+.photo-strip{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-height:26px}
+.photo-thumb{border:1px solid #d7e0e9;padding:0;background:#eef2f6;border-radius:10px;width:66px;height:66px;overflow:hidden;flex:0 0 auto}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-count{color:#6b8090;font-size:12px}
+.photo-album{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.photo-album-card{min-width:0;display:grid;align-content:start;gap:5px}
+.photo-album .photo-thumb{width:100%;height:auto;aspect-ratio:1}
+.photo-album .mini-note{overflow-wrap:anywhere;font-size:11px}
+.photo-dialog{border:0;border-radius:14px;padding:0;width:min(96vw,650px);max-height:90dvh;box-shadow:0 20px 50px #112a4150}
+.photo-dialog::backdrop{background:#071a2ddd}
+.photo-dialog-inner{padding:12px;max-height:88dvh;overflow:auto}
+.photo-dialog img{display:block;max-width:100%;width:auto;max-height:65dvh;object-fit:contain;margin:10px auto}
+.photo-dialog .actions{justify-content:center}
+@media(min-width:600px){.photo-album{grid-template-columns:repeat(5,minmax(0,1fr))}}

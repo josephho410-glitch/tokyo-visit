@@ -12,11 +12,11 @@
 <link rel="manifest" href="./manifest.webmanifest">
 <link rel="apple-touch-icon" href="./icon-192.png">
 <link rel="stylesheet" href="./styles.css">
-<title>東京參訪｜隨身助手 V2.4</title>
+<title>東京參訪｜隨身助手 V2.6</title>
 </head>
 <body>
 <header class="topbar">
-  <div class="topinner"><div><div class="eyebrow">JAPAN VISIT · NOV 2026</div><h1>東京參訪隨身助手</h1><div class="small subhead" id="subhead">2026/11/15—11/21 · 日本時間</div></div><div class="topright"><span class="version">V2.4</span><span id="connection" class="connection" aria-live="polite">—</span></div></div>
+  <div class="topinner"><div><div class="eyebrow">JAPAN VISIT · NOV 2026</div><h1>東京參訪隨身助手</h1><div class="small subhead" id="subhead">2026/11/15—11/21 · 日本時間</div></div><div class="topright"><span class="version">V2.6</span><span id="connection" class="connection" aria-live="polite">—</span></div></div>
 </header>
 <div id="update-banner" class="update-banner hidden" role="status"><span>找到新版程式，可更新離線資料。</span><button id="update-now" class="btn smallbtn">更新並重載</button></div>
 <main id="main">
@@ -32,7 +32,10 @@
  <button type="button" data-tab="more"><span class="tabicon">⚙</span><span>工具</span></button>
 </nav>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
+<input type="file" id="photo-input" class="hidden-input" accept="image/*,.heic,.heif" multiple aria-label="選擇照片">
+<input type="file" id="photo-camera" class="hidden-input" accept="image/*" capture="environment" aria-label="使用相機拍照">
 <script src="./data.js"></script>
+<script src="./photos.js"></script>
 <script src="./app.js"></script>
 </body>
 </html>
