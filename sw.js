@@ -1,5 +1,5 @@
 /* Offline shell, network-first updates; never cache arbitrary external sites. */
-const CACHE='tokyo-visit-v2.2-20261112-r2';
+const CACHE='tokyo-visit-v2.3-20261112-r3';
 const ASSETS=['./','./index.html','./styles.css','./data.js','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',event=>{event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('tokyo-visit-')&&k!==CACHE).map(k=>caches.delete(k)));await self.clients.claim()})())});
