@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
+<meta name="theme-color" content="#14263a">
+<meta name="color-scheme" content="light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="東京參訪">
+<meta name="description" content="2026 東京參訪個人離線行程、集合、提問、筆記及導航助手">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="stylesheet" href="./styles.css">
+<title>東京參訪｜隨身助手 V2</title>
+</head>
+<body>
+<header class="topbar">
+  <div class="topinner"><div><div class="eyebrow">JAPAN VISIT · NOV 2026</div><h1>東京參訪隨身助手</h1><div class="small subhead" id="subhead">2026/11/15—11/21 · 日本時間</div></div><div class="topright"><span class="version">V2.2</span><span id="connection" class="connection" aria-live="polite">—</span></div></div>
+</header>
+<div id="update-banner" class="update-banner hidden" role="status"><span>找到新版程式，可更新離線資料。</span><button id="update-now" class="btn smallbtn">更新並重載</button></div>
+<main id="main">
+ <div id="days" class="daystrip" aria-label="選擇日期"></div>
+ <div id="view" aria-live="off"></div>
+</main>
+<nav id="tabs" class="tabs" aria-label="主要功能">
+ <button type="button" data-tab="home" class="active"><span class="tabicon">⌂</span><span>今天</span></button>
+ <button type="button" data-tab="day"><span class="tabicon">▤</span><span>行程</span></button>
+ <button type="button" data-tab="ask"><span class="tabicon">☷</span><span>提問</span></button>
+ <button type="button" data-tab="shop"><span class="tabicon">☑</span><span>清單</span></button>
+ <button type="button" data-tab="cost"><span class="tabicon">¥</span><span>記帳</span></button>
+ <button type="button" data-tab="more"><span class="tabicon">⚙</span><span>工具</span></button>
+</nav>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="./data.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
