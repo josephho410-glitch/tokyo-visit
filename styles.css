@@ -89,3 +89,14 @@
 /* V2.8.1: notes remain legible on the dark upcoming-event hero. */
 .hero .hint{color:#d8e6f0}
 .hero .grid2{margin:16px 0 10px}
+
+/* V2.9: preflight and financial-source controls; compact mobile. */
+.cost-source-line{display:flex;align-items:center;gap:10px;margin:4px 0 8px;padding:5px 0 9px;border-bottom:1px solid #e7ecf1}
+.cost-source-line select{flex:1;min-width:0;max-width:255px;padding:6px 8px;font-size:13px}
+.expense-entry{padding:10px 0;border-bottom:1px solid #e8eff3}
+.expense-entry .checkline{border:0;padding:4px 0}
+#preflight-test label.checkline{display:flex;align-items:flex-start;gap:12px;padding:11px 0;line-height:1.5;cursor:pointer}
+#preflight-test input[type=checkbox]{margin-top:4px;flex:0 0 auto}
+#offline-route .event-expand{margin:8px 0}
+#offline-route .details-content{padding-top:10px}
+@media(max-width:375px){.cost-source-line{display:block}.cost-source-line select{width:100%;max-width:none;margin-top:5px}}
