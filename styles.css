@@ -85,3 +85,7 @@
 .budget-line{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;padding:8px 0;border-bottom:1px solid #ebf0f3}
 .budget-line strong{font-variant-numeric:tabular-nums;white-space:nowrap}
 @media(max-width:375px){.quiet-details>summary{align-items:flex-start;flex-wrap:wrap}.meeting-detail-row{grid-template-columns:1fr}}
+
+/* V2.8.1: notes remain legible on the dark upcoming-event hero. */
+.hero .hint{color:#d8e6f0}
+.hero .grid2{margin:16px 0 10px}

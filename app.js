@@ -145,14 +145,46 @@ function renderGiftStores(){
 function statusPill(e){let label=e.status==='confirmed'&&e.kind==='official'?'正式已確認':statusNames[e.status]||'規劃中';return `<span class="pill ${esc(e.status||'planned')}">${esc(label)}</span>`;}
 function renderStrip(){const container=$('#days');container.classList.toggle('hidden',!['day','ask'].includes(tab));if(!['day','ask'].includes(tab))return;const today=dayIndex(japanNow().date);container.innerHTML=TRIP_DATES.map((d,i)=>`<button class="daybtn ${selectedDay===i?'active':''} ${today===i?'today':''}" data-action="choose-day" data-day="${i}"><small>${WEEK[i]}</small><b>${15+i}</b></button>`).join('');}
 function render(){document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));const subs={home:'今日重點與出發提醒',day:displayDay(selectedDay)+' · 行程',ask:displayDay(selectedDay)+' · 參訪紀錄',shop:'伴手禮地點、購物與待辦',cost:'日圓支出紀錄',more:'離線資訊與資料備份'};$('#subhead').textContent=subs[tab]+' · 日本時間';renderStrip();$('#connection').textContent=online()?'連線中':'離線';$('#connection').classList.toggle('off',!online());$('#view').innerHTML=({home:renderHome,day:renderDay,ask:renderAsk,shop:renderShopping,cost:renderCosts,more:renderMore})[tab]();PhotoVault.hydrate($('#view'));}
-function renderHome(){const j=japanNow();const di=dayIndex(j.date);const useDay=di>=0?di:(j.date<TRIP_DATES[0]?0:6);const upcoming=firstUpcomingMeeting();const meetDay=upcoming?.day;const e=upcoming?.event;
- const departure=upcoming?.depart?.match(/^\d\d:\d\d$/)?upcoming.depart:null;
- const next=[...db.events].filter(x=>x.day===useDay&&x.status!=='cancelled'&&diffMinutes(x.day,x.sortTime||x.time)>-30).sort((a,b)=>(a.sortTime||a.time).localeCompare(b.sortTime||b.time))[0];
- return `<div class="card hero"><div class="eyelabel">JAPAN TIME · ${esc(j.date)} ${esc(j.time)}</div><div class="title" style="font-size:22px">${di>=0?'今天 '+displayDay(di):j.date<TRIP_DATES[0]?'距離日本參訪出發':'東京參訪已結束'}</div><p class="muted">${di>=0?'所有每日行程時間依日本當地時間顯示；航班另標臺灣時間。':'可先切換七天行程，查看集合點與需要確認的交通時間。'}</p><div class="actions"><button class="btn secondary" data-action="go-day" data-day="${useDay}">查看 ${displayDay(useDay)} 行程</button><button class="btn secondary" data-action="tab" data-tab="more">離線地址卡</button></div></div>
- ${e?`<div class="card"><div class="row between"><span class="eyelabel">下一場正式集合</span><span class="pill confirmed">${displayDay(meetDay)}</span></div><div class="title">${esc(e.title)}</div><div class="grid2"><div><div class="eyelabel">集合時間</div><div class="big mono">${esc(e.time)}</div></div><div><div class="eyelabel">距離集合</div><div class="big" style="font-size:19px">${countdown(diffMinutes(meetDay,e.time))}</div></div></div><p><strong>集合地點：</strong>${esc(e.place)}</p><div class="statbox"><div class="eyelabel">最晚出發時間（自行確認）</div><div class="big">${departure?esc(departure):'尚未設定'}</div>${departure?`<div class="hint">距出發剩下 ${countdown(diffMinutes(meetDay,departure))}；僅在開啟 App 時更新</div>`:'<div class="hint">目前沒有足夠資料推算最晚出門時間，請先確認電車路線與車次。</div>'}</div><div class="actions"><button class="btn" data-action="edit-depart" data-day="${meetDay}">設定出發提醒</button><button class="btn secondary" data-action="calendar" data-day="${meetDay}">匯出日曆提醒</button></div>${mapButtons(e.nav||e.place)}<p class="hint">站名／出口文字搜尋不保證地圖直接定位出口入口。出發前仍需核對站內出口指示。</p></div>`:'<div class="card">目前沒有待參加的正式集合。</div>'}
- ${next&&next.id!==e?.id?`<div class="card"><div class="eyelabel">當日接下來的行程</div><div class="title">${esc(next.time)}　${esc(next.title)}</div><div class="muted">${esc(next.place)} · ${kindNames[next.kind]||'行程'}</div><button class="btn secondary" style="margin-top:10px" data-action="go-day" data-day="${useDay}">查看當天完整時間軸</button></div>`:''}
- <div class="card"><h2>下一步注意事項</h2><ul class="list-plain">${(DEFAULT_ALERTS[useDay]||[]).slice(0,3).map(x=>`<li><strong>${esc(x[0])}：</strong>${esc(x[1])}</li>`).join('')}</ul></div>
- <div class="card"><h2>快速入口</h2><div class="grid2"><button class="btn secondary" data-action="tab" data-tab="ask">參訪提問與筆記</button><button class="btn secondary" data-action="go-food" data-day="${useDay}">今日沿途餐廳</button><button class="btn secondary" data-action="tab" data-tab="shop">伴手禮地點</button><button class="btn secondary" data-action="show-location" data-location="hotel">飯店日文地址</button><button class="btn secondary" data-action="tab" data-tab="cost">費用紀錄</button><button class="btn secondary" data-action="photo-album">照片總覽</button></div></div><div class="footer-note">今日倒數為 App 開啟時的資訊，不提供 iOS 背景推播。建議以日曆提醒作為實際出發通知。</div>`;
+function japanWallTimestamp(){
+ const j=japanNow();return Date.UTC(j.year,j.month-1,j.day,j.hour,j.minute);
+}
+function eventJapanTimestamp(e){
+ if(!e||!Number.isInteger(Number(e.day))||Number(e.day)<0||Number(e.day)>=TRIP_DATES.length)return NaN;
+ const m=String(e.time||'').match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+ if(!m)return NaN;
+ return Date.UTC(2026,10,15+Number(e.day),Number(m[1]),Number(m[2]))+(e.timezone==='Asia/Taipei'?3600000:0);
+}
+function nextUpcomingAction(){
+ const now=japanWallTimestamp(),actions=[];
+ for(const e of db.events){
+  if(e.status==='cancelled'||db.deletedEventIds.includes(e.id))continue;
+  const at=eventJapanTimestamp(e);
+  if(Number.isFinite(at)&&at>=now)actions.push({type:'event',event:e,day:Number(e.day),time:e.time,at});
+ }
+ for(const m of meetingList()){
+  if(!/^\d{2}:\d{2}$/.test(String(m.depart||'')))continue;
+  const h=Number(m.depart.slice(0,2)),min=Number(m.depart.slice(3));
+  if(h>23||min>59)continue;
+  const at=Date.UTC(2026,10,15+m.day,h,min);
+  if(at>=now&&at<eventJapanTimestamp(m.event))actions.push({type:'departure',event:m.event,day:m.day,time:m.depart,at,meeting:m});
+ }
+ actions.sort((a,b)=>a.at-b.at||(a.type==='departure'?-1:1));
+ return actions[0]||null;
+}
+function renderHome(){
+ const j=japanNow(),di=dayIndex(j.date),useDay=di>=0?di:(j.date<TRIP_DATES[0]?0:6);
+ const next=nextUpcomingAction(),upcoming=firstUpcomingMeeting(),meeting=upcoming?.event;
+ const nextIsMeeting=next?.type==='event'&&meeting&&next.event.id===meeting.id;
+ const label=next?.type==='departure'?'最晚出發提醒':'下一個行程';
+ const tzLabel=next?.type==='departure'?'日本時間':next?.event.timezone==='Asia/Taipei'?'臺灣時間':'日本時間';
+ const targetTitle=next?.type==='departure'?'出發前往 '+next.event.title:next?.event.title;
+ const remain=next?Math.max(0,Math.round((next.at-japanWallTimestamp())/60000)):0;
+ return `${next?`<div class="card hero"><div class="eyelabel">JAPAN TIME · ${esc(j.date)} ${esc(j.time)} · ${label}</div><div class="title" style="font-size:22px">${esc(targetTitle)}</div><div class="grid2" style="margin-top:15px"><div><div class="eyelabel">${displayDay(next.day)} · ${tzLabel}</div><div class="big mono">${esc(next.time)}</div></div><div><div class="eyelabel">距離${next.type==='departure'?'最晚出發':'行程開始'}</div><div class="big">${countdown(remain)}</div></div></div><p class="muted">${esc(next.event.place||'')}</p>${next.event.id==='day0-uber'?'<p class="hint">Uber 已預約，出發前仍須確認司機安排；NT$276 為預估費用。</p>':''}${next.type==='departure'?`<p class="hint">最晚出發時間由你自行設定；正式集合 ${esc(next.event.time)}（日本時間）。</p>`:''}<div class="actions"><button class="btn secondary" data-action="go-day" data-day="${next.day}">查看 ${displayDay(next.day)} 行程</button>${nextIsMeeting?`<button class="btn secondary" data-action="edit-depart" data-day="${next.day}">設定出發提醒</button>`:''}${next.event.place?`<a class="btn secondary" href="${attr(mapsLink(next.event.nav||next.event.ja||next.event.place))}" data-external="true" target="_blank" rel="noopener noreferrer">交通導航</a>`:''}</div></div>`:`<div class="card hero"><div class="eyelabel">JAPAN TIME · ${esc(j.date)} ${esc(j.time)}</div><div class="title" style="font-size:22px">行程已全部結束</div><p class="muted">可查看七天紀錄、照片及費用，並匯出完整備份。</p><div class="actions"><button class="btn secondary" data-action="go-day" data-day="${useDay}">查看行程</button><button class="btn secondary" data-action="tab" data-tab="more">備份工具</button></div></div>`}
+ ${meeting&&!nextIsMeeting?`<details class="card quiet-details"><summary>下一場正式集合 <span class="mini-note">${displayDay(upcoming.day)} ${esc(meeting.time)}</span></summary><div class="details-content"><div class="title" style="margin-top:12px">${esc(meeting.title)}</div><p><strong>集合地點：</strong>${esc(meeting.place)}</p><p class="muted">距離集合 ${countdown(diffMinutes(upcoming.day,meeting.time))}</p>${upcoming.depart?`<p class="hint">自行設定最晚出發 ${esc(upcoming.depart)}（日本時間）</p>`:'<p class="hint">尚未設定最晚出發時間；請提前確認轉乘及步行時間。</p>'}<div class="actions"><button class="btn secondary smallbtn" data-action="edit-depart" data-day="${upcoming.day}">設定出發提醒</button><button class="btn ghost smallbtn" data-action="calendar" data-day="${upcoming.day}">匯出日曆提醒</button></div>${mapButtons(meeting.nav||meeting.place)}</div></details>`:''}
+ ${nextIsMeeting&&upcoming?.depart?`<div class="card"><div class="eyelabel">最晚出發（自行設定）</div><div class="title">${esc(upcoming.depart)}　日本時間</div><button class="btn secondary smallbtn" data-action="edit-depart" data-day="${upcoming.day}">修改出發設定</button></div>`:''}
+ <details class="card quiet-details"><summary>下一步注意事項 <span class="mini-note">${(DEFAULT_ALERTS[next?.day??useDay]||[]).length} 項</span></summary><div class="details-content">${(DEFAULT_ALERTS[next?.day??useDay]||[]).slice(0,3).map(x=>`<p class="compact-notice"><strong>${esc(x[0])}：</strong>${esc(x[1])}</p>`).join('')}</div></details>
+ <div class="card"><h2>快速入口</h2><div class="grid2"><button class="btn secondary" data-action="tab" data-tab="ask">參訪提問與筆記</button><button class="btn secondary" data-action="go-food" data-day="${next?.day??useDay}">沿途餐廳</button><button class="btn secondary" data-action="tab" data-tab="shop">伴手禮地點</button><button class="btn secondary" data-action="show-location" data-location="hotel">飯店日文地址</button><button class="btn secondary" data-action="tab" data-tab="cost">費用紀錄</button><button class="btn secondary" data-action="photo-album">照片總覽</button></div></div>
+ <div class="footer-note">首頁倒數僅在 App 開啟期間更新，不提供 iOS 背景推播。正式集合請另匯入行事曆提醒。</div>`;
 }
 function renderDay(){const ev=sortEvents(db.events.filter(e=>e.day===selectedDay));const mm=db.meetings[selectedDay];return `<div class="sectionhead"><h2>${displayDay(selectedDay)} 行程</h2><button class="btn" data-action="edit-event" data-id="new">＋ 新增</button></div><div class="quicknav" style="margin-bottom:12px"><a class="btn secondary" href="#food-spots">今日沿途餐廳（${(FOOD_SPOTS[selectedDay]||[]).length}）</a><button class="btn ghost" data-action="tab" data-tab="shop">伴手禮地點</button></div>
  ${eventEditor!==null?renderEventForm(eventEditor):''}
