@@ -2,7 +2,7 @@
   "id": "./",
   "name": "東京參訪隨身助手 V2.9",
   "short_name": "東京參訪",
-  "description": "2026 東京參訪行程、集合導航、附近餐廳、伴手禮地點、現場筆記",
+  "description": "2026 東京參訪行程與集合、離線附近餐廳探索、伴手禮採買任務與現場紀錄",
   "lang": "zh-Hant",
   "start_url": "./index.html",
   "scope": "./",
