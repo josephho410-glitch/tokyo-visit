@@ -5,6 +5,7 @@ const SecretShopping=(function SecretFactory(){
  ['k1','Keroro 軍曹扭蛋','ケロロ軍曹 ガシャポン','秋葉原 Bandai 官方扭蛋店','bandai'],
  ['k2','鋼彈扭蛋','ガンダム ガシャポン','秋葉原 Bandai 官方扭蛋店','bandai'],
  ['k3','Keroro 07 幼年期模型','ケロロ軍曹プラモコレクション 07 ちびケロ','秋葉原模型店／上野 Yamashiroya','surugaya,yamashiroya'],
+ ['k11','Keroro 08 爆炸頭軍曹模型','ケロロ軍曹プラモコレクション 08 アフロ軍曹','秋葉原駿河屋模型館','surugaya'],
  ['k4','Keroro 一般娃娃、玩偶或吊飾','ケロロ軍曹 ぬいぐるみ／マスコット','上野 Yamashiroya、秋葉原動漫店','yamashiroya'],
  ['k5','Keroro 文具','ケロロ軍曹 文房具','上野 Yamashiroya','yamashiroya'],
  ['k6','Keroro 貼紙','ケロロ軍曹 ステッカー','上野 Yamashiroya、原宿角色商店','yamashiroya'],
@@ -23,9 +24,18 @@ const SecretShopping=(function SecretFactory(){
  ['m1','粉紅色痘痘藥 24g','エプールアクネクリーム','DONKI 藥品區、藥妝店','donki'],
  ['m2','曼秀雷敦 AD 止癢乳膏','メンソレータムAD','DONKI、藥妝店','donki'],
  ['m3','小林製藥肩頸止痛滾珠 90mL','アンメルツヨコヨコA ロング','DONKI、藥妝店','donki']
+ ]},
+ {id:'clothes',title:'D｜UNIQLO 服飾',items:[
+ ['u1','UNIQLO 女裝羅紋連帽上衣（長袖）｜灰色 S','フーデッドリブT／商品番号 488298','秋葉原 UNIQLO ヨドバシAkiba店','uniqlo']
  ]}];
  const SPECIAL={
- k3:'依參考照片尋找 07 ちびケロ；指定款缺貨不要自行替換。',
+ k3:'依參考照片尋找 07 ちびケロ；與新加的 08 アフロ軍曹 為兩件不同模型，不可相互替代。',
+ k11:'指定 08 アフロ軍曹（爆炸頭軍曹）；數量待確認。與 07 ちびケロ 分開找、分開勾選，缺貨不可自行替換。',
+ k4:'新增紅圈照片指定需求：Keroro 娃娃、吊飾依委託人原圖選款；照片未提供明確型號，不自行替換。',
+ k5:'新增紅圈照片指定需求：Keroro 文具依委託人原圖比對紅圈位置，不確定型號先詢問。',
+ k6:'新增紅圈照片指定需求：Keroro 貼紙依委託人原圖比對紅圈位置，不確定款式先詢問。',
+ k7:'Keroro 小型周邊依紅圈照片比對，注意不要與娃娃、文具、貼紙重複代購。',
+ u1:'UNIQLO 官方商品編號 488298；03 GRAY（灰色）、WOMEN S。數量暫定 1 件，尚待委託人最終確認；請先核對店面庫存。',
  k9:'可能與 tiny tiny 聯名是同一筆委託，請先確認避免重複購買。',
  k10:'請確認要買的是玩偶吊飾或連帽毯；兩者為不同商品。',
  s4:'日本 7-Eleven 2026/11/23 才開始陸續販售，晚於回臺日期；不保證買得到。',
@@ -38,12 +48,13 @@ const SecretShopping=(function SecretFactory(){
  {id:'surugaya',name:'駿河屋 秋葉原プラモデル館',date:'11/15 秋葉原',address:'東京都千代田区外神田4-4-2',hours:'週日參考 10:00–21:00'},
  {id:'donki',name:'ドン・キホーテ 秋葉原店',date:'11/15 秋葉原',address:'東京都千代田区外神田4-3-3',hours:'參考 24 小時'},
  {id:'yamashiroya',name:'ヤマシロヤ Yamashiroya',date:'11/18 上野',address:'東京都台東区上野6-14-6',hours:'參考 10:00–21:30',map:'https://maps.app.goo.gl/xLkqrYq516yJ9v3c7'},
- {id:'tinytiny',name:'tiny tiny ルミネエスト新宿店',date:'新宿需另行安排',address:'東京都新宿区新宿3-38-1',hours:'週末參考 10:30–21:00；平日 11:00–21:00'}
+ {id:'tinytiny',name:'tiny tiny ルミネエスト新宿店',date:'新宿需另行安排',address:'東京都新宿区新宿3-38-1',hours:'週末參考 10:30–21:00；平日 11:00–21:00'},
+ {id:'uniqlo',name:'ユニクロ ヨドバシAkiba店',date:'11/15 秋葉原',address:'東京都千代田区神田花岡町1-1 ヨドバシAkiba 7F',hours:'參考 9:30–22:00（官方店面資料）'}
  ];
  const ITEMS=GROUPS.flatMap(g=>g.items.map(a=>({id:a[0],name:a[1],ja:a[2],where:a[3],shops:a[4]?a[4].split(','):[],target:a[0]==='m1'?2:null,optional:['m2','m3'].includes(a[0]),caution:SPECIAL[a[0]]||''})));
  const MAP=new Map(ITEMS.map(x=>[x.id,x])),STATUSES=['todo','bought','missing','skip'];
  const SHOP_GROUPS=[
- {title:'11/15（日）｜秋葉原',shops:['bandai','surugaya','donki']},
+ {title:'11/15（日）｜秋葉原',shops:['bandai','surugaya','donki','uniqlo']},
  {title:'11/18（三）｜上野',shops:['yamashiroya']},
  {title:'另行安排｜新宿',shops:['tinytiny']}
  ];
@@ -80,9 +91,9 @@ const SecretShopping=(function SecretFactory(){
    return `<div class="secret-item ${complete(x)?'secret-done':''}" data-secret-item="${e(x.id)}">
      <div class="secret-item-top"><label class="secret-item-check"><input type="checkbox" data-secret-bought="${e(x.id)}" ${st.status==='bought'?'checked':''}><span class="secret-item-names"><strong>${e(x.name)}</strong><small lang="ja">${e(x.ja)}</small></span></label>
      <span class="secret-state" data-secret-label="${e(x.id)}">${e(stateLabel(x))}</span></div>
-     <p class="mini-note">需求：${x.target!==null?'2 條':'數量待確認'}${x.optional?' · <strong>是否購買待確認</strong>':''}</p>
+     <p class="mini-note">需求：${x.target!==null?'2 條':x.id==='u1'?'灰色 S／暫定 1 件（數量待確認）':'數量待確認'}${x.optional?' · <strong>是否購買待確認</strong>':''}</p>
      <details class="secret-item-extra"><summary>指定店家、數量與備註</summary><div>
-      <p class="muted">建議：${e(x.where)}</p>${x.caution?`<p class="hint">${e(x.caution)}</p>`:''}
+      <p class="muted">建議：${e(x.where)}</p>${x.caution?`<p class="hint">${e(x.caution)}</p>`:''}${x.id==='u1'?'<p><a class="btn secondary smallbtn" target="_blank" rel="noopener noreferrer" href="https://www.uniqlo.com/jp/ja/products/E488298-000/00">UNIQLO 官方商品／查看店面庫存</a></p>':''}
       <div class="grid2"><label>狀態<select data-secret-status="${e(x.id)}">${[['todo','未購買'],['bought','已購買'],['missing','缺貨／找不到'],['skip','暫不購買']].map(([v,t])=>`<option value="${v}" ${st.status===v?'selected':''}>${t}</option>`).join('')}</select></label>
       <label>實際已買數量${x.target!==null?'（條）':''}<input type="number" min="0" max="9999" step="1" inputmode="numeric" data-secret-qty="${e(x.id)}" value="${st.qty===null?'':st.qty}" placeholder="尚未確認"></label></div>
       <label>備註<textarea data-secret-note="${e(x.id)}" rows="2" placeholder="例如款式、委託人、缺貨原因">${e(st.note)}</textarea></label>
@@ -117,7 +128,7 @@ function render(){
    return `<div class="sectionhead"><h2>絕密購買｜依店家採買</h2></div>
     <div class="card secret-summary"><div class="secret-summary-row"><strong data-secret-count>${bought}/${total} 項已買到</strong><span class="mini-note">其中 ${optional} 項是否購買待確認</span></div>
     <div class="secret-meter"><div data-secret-bar style="width:${Math.round(bought/total*100)}%"></div></div>
-    <p class="hint">依實際要逛的店家分組；先開啟店家，直接勾選要找的商品。相同商品在多家店出現時共用同一筆進度，不會重複計入 17 項。</p>
+    <p class="hint">依實際要逛的店家分組；先開啟店家，直接勾選要找的商品。相同商品在多家店出現時共用同一筆進度，不會重複計入 ${ITEMS.length} 項。</p>
     <p class="mini-note">粉紅痘痘藥需買 2 條才算完成；其他數量待確認。曼秀雷敦 AD、アンメルツ仍待確認是否委託。</p></div>
     <div class="card secret-quick-card"><strong>快速找店</strong><div class="secret-shop-jumps">
       ${SHOPS.map(shop=>`<button type="button" class="btn secondary smallbtn" data-secret-jump="${e(shop.id)}">${e(shop.name.split(' ')[0])}</button>`).join('')}
@@ -174,7 +185,7 @@ function refresh(){
  }
 function summaryText(){
    const line=x=>{const v=state.items[x.id];
-     return (complete(x)?'[x] ':'[ ] ')+x.name+'｜'+x.ja+'｜需求：'+(x.target===null?'待確認':x.target+' 條')+'｜'+stateLabel(x)+'｜已買：'+(v.qty===null?'未記':v.qty)+(v.note?'｜備註：'+v.note:'');
+     return (complete(x)?'[x] ':'[ ] ')+x.name+'｜'+x.ja+'｜需求：'+(x.target!==null?x.target+' 條':x.id==='u1'?'灰色 S／暫定 1 件（待確認）':'待確認')+'｜'+stateLabel(x)+'｜已買：'+(v.qty===null?'未記':v.qty)+(v.note?'｜備註：'+v.note:'');
    };
    const sections=SHOP_GROUPS.flatMap(group=>[
      group.title,...group.shops.map(id=>{const shop=SHOPS.find(s=>s.id===id);
