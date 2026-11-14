@@ -42,6 +42,15 @@ const SecretShopping=(function SecretFactory(){
  ];
  const ITEMS=GROUPS.flatMap(g=>g.items.map(a=>({id:a[0],name:a[1],ja:a[2],where:a[3],shops:a[4]?a[4].split(','):[],target:a[0]==='m1'?2:null,optional:['m2','m3'].includes(a[0]),caution:SPECIAL[a[0]]||''})));
  const MAP=new Map(ITEMS.map(x=>[x.id,x])),STATUSES=['todo','bought','missing','skip'];
+ const SHOP_GROUPS=[
+ {title:'11/15（日）｜秋葉原',shops:['bandai','surugaya','donki']},
+ {title:'11/18（三）｜上野',shops:['yamashiroya']},
+ {title:'另行安排｜新宿',shops:['tinytiny']}
+ ];
+ const storeItems=shop=>ITEMS.filter(item=>item.shops.includes(shop.id));
+ const storeStats=shop=>{const items=storeItems(shop);return {done:items.filter(complete).length,total:items.length}};
+ const unassignedItems=()=>ITEMS.filter(item=>!item.shops.length);
+
  const e=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
  const initial=()=>({items:Object.fromEntries(ITEMS.map(x=>[x.id,{status:'todo',qty:null,note:''}])),shops:Object.fromEntries(SHOPS.map(x=>[x.id,false]))});
  function normalize(raw){
@@ -79,45 +88,76 @@ const SecretShopping=(function SecretFactory(){
       <label>備註<textarea data-secret-note="${e(x.id)}" rows="2" placeholder="例如款式、委託人、缺貨原因">${e(st.note)}</textarea></label>
      </div></details></div>`;
  }
- function storeUI(s){
-   const matches=ITEMS.filter(x=>x.shops.includes(s.id));
-   const url=s.map||'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(s.name+' '+s.address);
-   return `<div class="secret-store"><div class="secret-store-heading"><strong>${e(s.name)}</strong><span class="mini-note">${e(s.date)}</span></div>
-    <p class="mini-note">${e(s.address)} · ${e(s.hours)}（非即時營業）</p>
-    <p class="hint">建議找：${e(matches.map(x=>x.name).join('、'))}</p>
-    <div class="secret-store-actions"><label><input type="checkbox" data-secret-shop="${e(s.id)}" ${state.shops[s.id]?'checked':''}> 已逛過</label>
-    <a class="btn secondary smallbtn" target="_blank" rel="noopener noreferrer" href="${e(url)}">Google Maps</a></div></div>`;
+function storeUI(shop,expanded=false){
+   const matches=storeItems(shop).slice().sort((a,b)=>Number(complete(a))-Number(complete(b)));
+   const stats=storeStats(shop);
+   const url=shop.map||'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(shop.name+' '+shop.address);
+   return `<details class="card secret-group secret-shop" id="secret-shop-${e(shop.id)}" ${expanded?'open':''}>
+     <summary><span class="secret-shop-label"><strong>${e(shop.name)}</strong><small>${e(shop.date)}</small></span>
+      <span class="secret-shop-count" data-secret-shop-count="${e(shop.id)}">${stats.done}/${stats.total} 已買</span></summary>
+     <div class="secret-group-list">
+      <p class="mini-note secret-shop-address">${e(shop.address)}</p>
+      <p class="mini-note">${e(shop.hours)}（僅供參考，非即時營業狀態）</p>
+      <div class="secret-store-actions"><label><input type="checkbox" data-secret-shop="${e(shop.id)}" ${state.shops[shop.id]?'checked':''}> 已逛過這家店</label>
+       <a class="btn secondary smallbtn" target="_blank" rel="noopener noreferrer" href="${e(url)}">Google Maps</a></div>
+      <div class="secret-shop-hint">在這家店可找的代購品項（${matches.length}）。同一商品若在其他店也有候選，購買狀態會同步，總數只計一次。</div>
+      ${matches.map(item=>itemUI(item)).join('')}
+     </div></details>`;
  }
- function render(){
+ function unassignedUI(){
+   const noShop=unassignedItems();if(!noShop.length)return '';
+   return `<details class="card secret-group secret-shop" id="secret-shop-other">
+    <summary><span class="secret-shop-label"><strong>指定通路待確認</strong><small>尚未核對實際店面；不虛構地點</small></span>
+     <span class="secret-shop-count">${noShop.filter(complete).length}/${noShop.length} 已買</span></summary>
+    <div class="secret-group-list"><p class="hint">這些商品暫無可以確認的指定實體店，保留原本的建議通路。購買前先核對款式及是否重複委託。</p>
+     ${noShop.map(item=>itemUI(item)).join('')}</div></details>`;
+ }
+function render(){
    const {bought,total,optional}=progress();
-   return `<div class="sectionhead"><h2>絕密購買｜代購清單</h2></div>
+   return `<div class="sectionhead"><h2>絕密購買｜依店家採買</h2></div>
     <div class="card secret-summary"><div class="secret-summary-row"><strong data-secret-count>${bought}/${total} 項已買到</strong><span class="mini-note">其中 ${optional} 項是否購買待確認</span></div>
     <div class="secret-meter"><div data-secret-bar style="width:${Math.round(bought/total*100)}%"></div></div>
-    <p class="hint">只有粉紅痘痘藥確定數量為 2 條，其他品項的數量仍待確認；勾選是「買到商品」，不是找到店家。此清單不含公司伴手禮或自己的衣物。</p></div>
-    ${GROUPS.map((g,i)=>`<details class="card secret-group" ${i===0?'open':''}><summary><strong>${e(g.title)}</strong><span class="mini-note" data-secret-group="${g.id}">${g.items.filter(x=>complete(MAP.get(x[0]))).length}/${g.items.length}</span></summary>
-    <div class="secret-group-list">${g.items.map(x=>itemUI(MAP.get(x[0]))).join('')}</div></details>`).join('')}
-    <details class="card secret-group"><summary><strong>指定店家與採買動線</strong><span class="mini-note">5 處</span></summary><div class="secret-group-list">${SHOPS.map(storeUI).join('')}</div></details>
+    <p class="hint">依實際要逛的店家分組；先開啟店家，直接勾選要找的商品。相同商品在多家店出現時共用同一筆進度，不會重複計入 17 項。</p>
+    <p class="mini-note">粉紅痘痘藥需買 2 條才算完成；其他數量待確認。曼秀雷敦 AD、アンメルツ仍待確認是否委託。</p></div>
+    <div class="card secret-quick-card"><strong>快速找店</strong><div class="secret-shop-jumps">
+      ${SHOPS.map(shop=>`<button type="button" class="btn secondary smallbtn" data-secret-jump="${e(shop.id)}">${e(shop.name.split(' ')[0])}</button>`).join('')}
+      ${unassignedItems().length?'<button type="button" class="btn secondary smallbtn" data-secret-jump="other">通路待確認</button>':''}
+     </div></div>
+    ${SHOP_GROUPS.map(group=>`<section class="secret-area"><h3 class="secret-area-title">${e(group.title)}</h3>
+      ${group.shops.map((id,index)=>storeUI(SHOPS.find(s=>s.id===id),group===SHOP_GROUPS[0]&&index===0)).join('')}
+     </section>`).join('')}
+    ${unassignedUI()}
     <div class="card"><h3>購買前特別核對</h3>
-    <p class="hint">niko and ... 與 tiny tiny 的 Keroro 聯名需求可能重複，勿自行買兩份。</p>
-    <p class="hint">粉紅痘痘藥：エプールアクネクリーム 24g，JAN 4987754104139，確定 2 條。</p>
-    <p class="hint">黃色 Chupa Chups 酸糖：日本 7-Eleven 2026/11/23 才開始陸續販售，行程中不保證買得到。</p>
-    <p class="hint">指定款缺貨時先詢問委託人；曼秀雷敦 AD、アンメルツ目前僅為參考圖片，非確定委託。</p></div>
-    <div class="card"><h3>代購清單獨立備份</h3><p class="hint">此清單與探索、原購物及記帳完全分開。勾選、數量與備註另存於本機，不包含在「工具」的行程／照片 ZIP；請自行備份下面的代購 JSON。</p>
-    <div class="actions"><button class="btn secondary smallbtn" data-secret-action="copy">複製核對清單</button><button class="btn secondary smallbtn" data-secret-action="export">匯出代購 JSON</button></div>
-    <label>還原獨立代購 JSON <input type="file" accept=".json,application/json" data-secret-import></label>
-    <p class="hint">注意：GitHub 儲存庫公開，預載代購品項不是加密的；你的勾選與備註只存在本機。</p></div>`;
+     <p class="hint">niko and ... 與 tiny tiny 的 Keroro 聯名需求可能重複，勿自行買兩份。</p>
+     <p class="hint">粉紅痘痘藥：エプールアクネクリーム 24g，JAN 4987754104139，確定 2 條。</p>
+     <p class="hint">黃色 Chupa Chups 酸糖：日本 7-Eleven 2026/11/23 才開始陸續販售，行程中不保證買得到。</p>
+     <p class="hint">指定款缺貨時先詢問委託人；曼秀雷敦 AD、アンメルツ目前僅為參考圖片，非確定委託。</p></div>
+    <div class="card"><h3>代購清單獨立備份</h3>
+     <p class="hint">此清單與探索、原購物及記帳完全分開。勾選、數量與備註另存於本機，不包含在「工具」的行程／照片 ZIP；請自行備份下面的代購 JSON。</p>
+     <div class="actions"><button class="btn secondary smallbtn" data-secret-action="copy">複製店家代購清單</button>
+      <button class="btn secondary smallbtn" data-secret-action="export">匯出代購 JSON</button></div>
+     <label>還原獨立代購 JSON <input type="file" accept=".json,application/json" data-secret-import></label>
+     <p class="hint">GitHub 儲存庫公開，預載品項不是加密資訊；你的勾選與備註只存在本機。</p></div>`;
  }
- function refresh(){
+function refresh(){
    const root=document.getElementById('view');if(!root)return;
    const p=progress(),count=root.querySelector('[data-secret-count]'),bar=root.querySelector('[data-secret-bar]');
    if(count)count.textContent=`${p.bought}/${p.total} 項已買到`;
    if(bar)bar.style.width=Math.round(p.bought/p.total*100)+'%';
-   for(const g of GROUPS){const x=root.querySelector('[data-secret-group="'+g.id+'"]');if(x)x.textContent=g.items.filter(item=>complete(MAP.get(item[0]))).length+'/'+g.items.length}
+   for(const shop of SHOPS){
+     const st=storeStats(shop),c=root.querySelector('[data-secret-shop-count="'+shop.id+'"]');
+     if(c)c.textContent=st.done+'/'+st.total+' 已買';
+   }
+   const other=root.querySelector('#secret-shop-other .secret-shop-count');
+   if(other){const items=unassignedItems();other.textContent=items.filter(complete).length+'/'+items.length+' 已買'}
    for(const item of ITEMS){
-     const x=root.querySelector('[data-secret-item="'+item.id+'"]');if(x)x.classList.toggle('secret-done',complete(item));
-     const label=root.querySelector('[data-secret-label="'+item.id+'"]');if(label)label.textContent=stateLabel(item);
-     const box=root.querySelector('[data-secret-bought="'+item.id+'"]');if(box)box.checked=state.items[item.id].status==='bought';
-     const sel=root.querySelector('[data-secret-status="'+item.id+'"]');if(sel)sel.value=state.items[item.id].status;
+     const v=state.items[item.id];
+     root.querySelectorAll('[data-secret-item="'+item.id+'"]').forEach(node=>node.classList.toggle('secret-done',complete(item)));
+     root.querySelectorAll('[data-secret-label="'+item.id+'"]').forEach(node=>node.textContent=stateLabel(item));
+     root.querySelectorAll('[data-secret-bought="'+item.id+'"]').forEach(node=>node.checked=v.status==='bought');
+     root.querySelectorAll('[data-secret-status="'+item.id+'"]').forEach(node=>node.value=v.status);
+     root.querySelectorAll('[data-secret-qty="'+item.id+'"]').forEach(node=>{if(node!==document.activeElement)node.value=v.qty===null?'':String(v.qty)});
+     root.querySelectorAll('[data-secret-note="'+item.id+'"]').forEach(node=>{if(node!==document.activeElement)node.value=v.note});
    }
  }
  function change(ev){
@@ -132,9 +172,18 @@ const SecretShopping=(function SecretFactory(){
    else return false;
    save();refresh();return true;
  }
- function summaryText(){return GROUPS.map(g=>g.title+'\n'+g.items.map(row=>{const x=MAP.get(row[0]),v=state.items[x.id];
-   return (complete(x)?'[x] ':'[ ] ')+x.name+'｜'+x.ja+'｜需求：'+(x.target===null?'待確認':x.target+' 條')+'｜'+stateLabel(x)+'｜已買：'+(v.qty===null?'未記':v.qty)+'｜'+x.where+(v.note?'｜備註：'+v.note:'');
- }).join('\n')).join('\n\n')}
+function summaryText(){
+   const line=x=>{const v=state.items[x.id];
+     return (complete(x)?'[x] ':'[ ] ')+x.name+'｜'+x.ja+'｜需求：'+(x.target===null?'待確認':x.target+' 條')+'｜'+stateLabel(x)+'｜已買：'+(v.qty===null?'未記':v.qty)+(v.note?'｜備註：'+v.note:'');
+   };
+   const sections=SHOP_GROUPS.flatMap(group=>[
+     group.title,...group.shops.map(id=>{const shop=SHOPS.find(s=>s.id===id);
+       return '【'+shop.name+'】\n'+shop.address+'\n'+storeItems(shop).map(line).join('\n');
+     })
+   ]);
+   const others=unassignedItems();if(others.length)sections.push('【指定通路待確認】\n'+others.map(line).join('\n'));
+   return sections.join('\n\n')+'\n\n※ 各店出現的重複候選商品，完成狀態為共用同一筆。';
+ }
  async function backup(){
    const blob=new Blob([JSON.stringify({kind:KEY,exportedAt:new Date().toISOString(),state},null,2)],{type:'application/json;charset=utf-8'});
    try{await shareOrDownload(blob,'東京代購_絕密購買_'+new Date().toISOString().slice(0,10)+'.json');message('請確認已將獨立代購備份儲存至檔案')}
@@ -146,7 +195,16 @@ const SecretShopping=(function SecretFactory(){
      state=normalize(obj.state);if(save()){document.getElementById('view').innerHTML=render();message('代購清單已還原')}}
    catch(ex){message('還原失敗：'+ex.message)}
  }
- function click(ev){const b=ev.target.closest('[data-secret-action]');if(!b)return false;
+ function click(ev){
+   const jumper=ev.target.closest('[data-secret-jump]');
+   if(jumper){
+     const id=jumper.dataset.secretJump;
+     if(id!=='other'&&!SHOPS.some(x=>x.id===id))return true;
+     const el=document.getElementById('secret-shop-'+id);
+     if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'})}
+     return true;
+   }
+   const b=ev.target.closest('[data-secret-action]');if(!b)return false;
    if(b.dataset.secretAction==='copy')copyText(summaryText());
    else if(b.dataset.secretAction==='export')backup();
    return true

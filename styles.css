@@ -130,3 +130,20 @@
 .secret-item-extra>summary{font-size:12px;color:#355b77;cursor:pointer;padding:10px 9px;min-height:40px}.secret-item-extra[open]>summary{border-bottom:1px solid #e6edf2}.secret-item-extra>div{padding:10px}.secret-item-extra p{margin:6px 0 10px}.secret-item-extra label{display:grid;gap:5px;font-size:12px}.secret-item-extra select,.secret-item-extra input,.secret-item-extra textarea{width:100%;min-width:0}
 .secret-store{padding:13px 0;border-bottom:1px solid #e6edf2}.secret-store:last-child{border-bottom:none}.secret-store-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:7px;flex-wrap:wrap}.secret-store-heading strong{font-size:14px}.secret-store p{margin:6px 0}.secret-store-actions{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px;margin-top:9px}.secret-store-actions label{display:flex;align-items:center;gap:8px;font-size:13px}.secret-store-actions input[type=checkbox]{width:18px;height:18px}
 @media(max-width:380px){.secret-summary-row .mini-note{max-width:100%;text-align:left}.secret-item-top{gap:4px}.secret-item-names strong{font-size:13px}.secret-item-extra{margin-left:0}.secret-item>.mini-note{margin-left:0}.secret-item-extra .grid2{grid-template-columns:1fr}.secret-state{max-width:78px}}
+
+/* Store-first proxy shopping: grouped by visit day with one-tap navigation. */
+.secret-area{display:block;margin:12px 0 16px;min-width:0}
+.secret-area-title{font-size:15px;line-height:1.5;margin:12px 3px 10px;color:#243b50}
+.secret-quick-card{padding:13px 14px}.secret-quick-card>strong{font-size:14px}
+.secret-shop-jumps{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.secret-shop-jumps .btn{min-height:44px;max-width:100%;white-space:normal;overflow-wrap:anywhere;text-align:center}
+.secret-shop{scroll-margin-top:85px;margin:0 0 10px}
+.secret-shop>summary{gap:10px;justify-content:space-between}
+.secret-shop-label{display:grid;gap:5px;min-width:0;flex:1}
+.secret-shop-label strong{overflow-wrap:anywhere;font-size:14px;line-height:1.4}
+.secret-shop-label small{font-size:12px;line-height:1.4;color:#647b8d}
+.secret-shop-count{display:inline-flex;align-items:center;justify-content:center;border-radius:7px;background:#ebf3f7;color:#315b73;padding:6px 8px;font-size:12px;white-space:nowrap;flex:0 0 auto}
+.secret-shop-address{overflow-wrap:anywhere;word-break:break-word;margin:10px 0 5px}
+.secret-shop-hint{font-size:12px;line-height:1.6;color:#536a7e;background:#f1f5f9;border-radius:8px;padding:9px;margin:12px 0 4px}
+.secret-store-actions{margin:10px 0 12px}
+@media(max-width:380px){.secret-shop-count{font-size:11px;padding:5px 6px}.secret-shop-label strong{font-size:13px}.secret-shop-jumps{gap:6px}.secret-shop-jumps .btn{padding:8px 9px}}
