@@ -51,17 +51,36 @@ function refreshSeed(d){ // Refresh only untouched default items. All user edits
   const wanted=DEFAULT_QUESTIONS[key]||[];
   const wantedIds=new Set(wanted.map(q=>q.id));
   const found=new Map(old.map(q=>[q.id,q]));
-  if(key==='1'||key==='3'){
+  if(key==='1'){
+   // 2026-11-15 source replaces the IIS five questions, with semantic (not ordinal) ID mapping.
    const refreshed=wanted.filter(q=>!d.deletedQuestionIds.includes(q.id)).map(q=>{
     const prev=found.get(q.id);if(!prev)return COPY(q);
-    // Explicit edits to the question text win, while legacy default wording is upgraded.
+    const oldPreset=SUPERSEDED_IIS_QUESTION_TEXT[q.id];
+    const isPreviousPreset=prev.text===oldPreset||prev.text===PREVIOUS_DEFAULT_QUESTION_TEXT[q.id];
+    if(prev.edited&&prev.text&&prev.text!==q.text&&!isPreviousPreset){
+     // Keep user-written question edits in free notes while applying explicitly requested new wording.
+     appendArchivedQuestion(d,key,prev);
+    }
+    return {...COPY(q),asked:!!prev.asked,answer:prev.answer||'',followup:prev.followup||'',edited:false};
+   });
+   for(const q of old.filter(q=>!wantedIds.has(q.id))){
+    if(Object.prototype.hasOwnProperty.call(SUPERSEDED_IIS_QUESTION_TEXT,q.id)||
+       Object.prototype.hasOwnProperty.call(PREVIOUS_DEFAULT_QUESTION_TEXT,q.id)){
+      const modified=!!q.edited&&q.text!==SUPERSEDED_IIS_QUESTION_TEXT[q.id];
+      if(q.answer||q.followup||q.asked||modified)appendArchivedQuestion(d,key,q);
+    }else refreshed.push(q); // User-added records are preserved.
+   }
+   d.questions[key]=refreshed;
+  }else if(key==='3'){
+   const refreshed=wanted.filter(q=>!d.deletedQuestionIds.includes(q.id)).map(q=>{
+    const prev=found.get(q.id);if(!prev)return COPY(q);
     const userChangedText=!!prev.text&&prev.text!==PREVIOUS_DEFAULT_QUESTION_TEXT[q.id]&&prev.text!==q.text;
     return {...COPY(q),asked:!!prev.asked,answer:prev.answer||'',followup:prev.followup||'',text:userChangedText?prev.text:q.text,edited:!!prev.edited||userChangedText};
    });
    for(const q of old.filter(q=>!wantedIds.has(q.id))){
     if(PREVIOUS_DEFAULT_QUESTION_TEXT[q.id]){
      if(q.answer||q.followup||q.asked)appendArchivedQuestion(d,key,q);
-    }else refreshed.push(q); // User-added questions stay with the two relevant visits.
+    }else refreshed.push(q);
    }
    d.questions[key]=refreshed;
   }else{
@@ -294,7 +313,8 @@ function buildVisitMarkdown(day,photos=[]){
  const m=db.meetings[day],e=m?getEvent(m.visitId):null,meet=m?getEvent(m.eventId):null,questions=db.questions[day]||[];
  const lines=[`# 2026/11/${15+day}｜${e?.title||'現場筆記'}`,'',`- 日期：${TRIP_DATES[day]}`,`- 參訪地點：${e?.place||'—'}`,`- 集合地點及時間：${meet?meet.time+'　'+meet.place:'—'}`,'','## 交流議題與紀錄',''];
  if([1,3].includes(day)){
-  for(const [i,q] of questions.entries())lines.push(`### ${i+1}. ${q.title||q.text}`,'**原始問題**',q.text||'','**交流目的**',q.purpose||'','**已詢問**：'+(q.asked?'是':'否'),'**日方回答及技術數據**',q.answer||'（尚未填寫）','**後續追蹤**',q.followup||'（尚未填寫）','');
+  for(const [i,q] of questions.entries())lines.push(`### ${i+1}. ${q.title||q.text}`,...(q.priority?['**優先程度**：'+q.priority,'**建議討論時間**：'+q.discussionTime]:[]),...(q.background?['**背景說明**',q.background,'']:[]),'**原始問題**',q.text||'',...(q.purpose?['**交流目的**',q.purpose]:[]),'**已詢問**：'+(q.asked?'是':'否'),'**日方回答及技術數據**',q.answer||'（尚未填寫）','**後續追蹤**',q.followup||'（尚未填寫）','');
+   if(day===1)lines.push('## 現場使用建議',IIS_FIELD_GUIDANCE.durationNote,IIS_FIELD_GUIDANCE.fieldTip,IIS_FIELD_GUIDANCE.caution,'');
  }else lines.push('本場未預載交流問題，以自由筆記為主。','');
  lines.push('## 現場補充筆記',db.notes['ask'+day]||'（尚未填寫）','','## 照片索引');
  const ps=photos.filter(x=>x.link==='visit:'+day);
@@ -316,13 +336,13 @@ function renderAsk(){
  const q=owned?(db.questions[selectedDay]||[]):[];
  const meeting=db.meetings[selectedDay];
  const visitName=meeting?(getEvent(meeting.visitId)?.title||'參訪紀錄'):'';
- const topics=selectedDay===1?'低噪音工具、模組化臨時隔音牆（SPTW）、固體傳播音、人員干擾感、都市噪音預測':selectedDay===3?'Edge Silencer、凍結樁頭處理、TANC、工地噪音量測與自主管理':'';
+ const topics=selectedDay===1?'低噪音工具、固體傳播音、主觀干擾、室內外適用性、施工現場改善建議':selectedDay===3?'Edge Silencer、凍結樁頭處理、TANC、工地噪音量測與自主管理':'';
  if(!owned){
   const title=meeting?esc(visitName):'個人行程／交通筆記';
   return `<div class="sectionhead"><h2>${displayDay(selectedDay)} 現場筆記</h2></div><div class="card"><h2>${title}</h2><p class="muted">${meeting?'這場參訪不需要你準備問題，直接記錄重要資訊即可。':'可記錄交通、購物、行李與其他個人事項。'}內容會自動儲存於本機。</p><label for="free-note">參訪內容、數據、日方說明與待辦事項</label><textarea id="free-note" data-note="ask${selectedDay}" rows="13" placeholder="在此輸入現場筆記、重點、照片編號、待追蹤事項……">${esc(db.notes['ask'+selectedDay]||'')}</textarea>${photoWidget('visit:'+selectedDay)}<div class="actions"><button class="btn secondary smallbtn" data-action="export-visit" data-day="${selectedDay}">匯出本場紀錄 MD</button><button class="btn ghost smallbtn" data-action="copy-visit" data-day="${selectedDay}">複製紀錄</button></div></div>`;
  }
- return `<div class="sectionhead"><h2>${displayDay(selectedDay)} 交流問題（${q.length} 題）</h2><button class="btn" data-action="edit-question" data-id="new">＋ 新增</button></div><div class="card"><strong>${esc(visitName)}</strong><p class="muted">本頁以最新《日本參訪說明》為依據；4 題主要議題及 ${selectedDay===1?'1':'3'} 題延伸議題。逐題可以記錄日方回答。</p><div class="hint">重點：${esc(topics)}</div><div class="actions"><button class="btn secondary smallbtn" data-action="export-visit" data-day="${selectedDay}">匯出本場紀錄 MD</button><button class="btn ghost smallbtn" data-action="copy-visit" data-day="${selectedDay}">複製紀錄</button></div></div>${questionEditor!==null?renderQuestionForm(questionEditor):''}
- <div class="card">${q.length?q.map((v,i)=>`<div class="question"><div class="row" style="align-items:flex-start"><input type="checkbox" aria-label="此題已詢問" data-asked="${attr(v.id)}" ${v.asked?'checked':''}><div class="grow"><div class="row wrap"><span class="pill ${v.category==='extended'?'unconfirmed':'confirmed'}">${v.category==='extended'?'延伸議題':'主要議題'}</span></div><div class="qa-title ${v.asked?'readonly':''}">${i+1}. ${esc(v.title||v.text)}</div></div></div>${v.title?`<details class="question-details"><summary>查看完整問句與交流目的</summary><p class="preline">${esc(v.text)}</p>${v.purpose?`<p class="muted preline"><strong>交流目的：</strong>${esc(v.purpose)}</p>`:''}</details>`:''}<div class="qa-input"><label for="answer-${attr(v.id)}">日方回答／技術數據</label><textarea id="answer-${attr(v.id)}" rows="3" data-qfield="answer" data-qid="${attr(v.id)}" placeholder="量測條件、降噪 dB、回答摘要……">${esc(v.answer||'')}</textarea></div><div class="qa-input"><label for="follow-${attr(v.id)}">後續追蹤事項</label><textarea id="follow-${attr(v.id)}" rows="2" data-qfield="followup" data-qid="${attr(v.id)}" placeholder="索取簡報、相關文獻、適用於臺灣的建議……">${esc(v.followup||'')}</textarea></div><div class="actions"><button class="btn secondary smallbtn" data-action="edit-question" data-id="${attr(v.id)}">修改問題</button><button class="btn danger smallbtn" data-action="delete-question" data-id="${attr(v.id)}">刪除</button></div></div>`).join(''):'<div class="empty">沒有預設提問，可自行新增。</div>'}</div><div class="card"><h2>其他現場筆記</h2><textarea rows="7" data-note="ask${selectedDay}" placeholder="其他補充、照片編號、與會人員、待辦……">${esc(db.notes['ask'+selectedDay]||'')}</textarea>${photoWidget('visit:'+selectedDay)}</div>`;
+ return `<div class="sectionhead"><h2>${displayDay(selectedDay)} 交流問題（${q.length} 題）</h2><button class="btn" data-action="edit-question" data-id="new">＋ 新增</button></div><div class="card"><strong>${esc(visitName)}</strong><p class="muted">${selectedDay===1?'依 11/15 更新的坂本教授五題交流資料：3 題必問、1 題視時間、1 題最後請教。每題完整背景與提問可展開閱讀。':'依《日本參訪說明》：4 題主要議題及 3 題延伸議題。逐題可以記錄日方回答。'}</p><div class="hint">重點：${esc(topics)}</div><div class="actions"><button class="btn secondary smallbtn" data-action="export-visit" data-day="${selectedDay}">匯出本場紀錄 MD</button><button class="btn ghost smallbtn" data-action="copy-visit" data-day="${selectedDay}">複製紀錄</button></div></div>${questionEditor!==null?renderQuestionForm(questionEditor):''}
+ <div class="card">${q.length?q.map((v,i)=>`<div class="question"><div class="row" style="align-items:flex-start"><input type="checkbox" aria-label="此題已詢問" data-asked="${attr(v.id)}" ${v.asked?'checked':''}><div class="grow"><div class="row wrap"><span class="pill ${v.category==='extended'?'unconfirmed':'confirmed'}">${v.category==='extended'?'延伸議題':'主要議題'}</span>${v.priority?`<span class="pill">${esc(v.priority)}</span>`:''}${v.discussionTime?`<span class="mini-note">${esc(v.discussionTime)}</span>`:''}</div><div class="qa-title ${v.asked?'readonly':''}">${i+1}. ${esc(v.title||v.text)}</div></div></div>${v.title?`<details class="question-details"><summary>${v.background?'查看背景說明與完整提問':'查看完整問句與交流目的'}</summary>${v.background?`<p class="muted preline"><strong>背景說明：</strong>\n${esc(v.background)}</p>`:''}<p class="preline"><strong>${v.background?'想請教教授：':'原始問題：'}</strong>\n${esc(v.text)}</p>${v.purpose?`<p class="muted preline"><strong>交流目的：</strong>${esc(v.purpose)}</p>`:''}</details>`:''}<div class="qa-input"><label for="answer-${attr(v.id)}">日方回答／技術數據</label><textarea id="answer-${attr(v.id)}" rows="3" data-qfield="answer" data-qid="${attr(v.id)}" placeholder="量測條件、降噪 dB、回答摘要……">${esc(v.answer||'')}</textarea></div><div class="qa-input"><label for="follow-${attr(v.id)}">後續追蹤事項</label><textarea id="follow-${attr(v.id)}" rows="2" data-qfield="followup" data-qid="${attr(v.id)}" placeholder="索取簡報、相關文獻、適用於臺灣的建議……">${esc(v.followup||'')}</textarea></div><div class="actions"><button class="btn secondary smallbtn" data-action="edit-question" data-id="${attr(v.id)}">修改問題</button><button class="btn danger smallbtn" data-action="delete-question" data-id="${attr(v.id)}">刪除</button></div></div>`).join(''):'<div class="empty">沒有預設提問，可自行新增。</div>'}</div>${selectedDay===1?`<details class="card quiet-details"><summary>現場提問建議與研究數據注意事項</summary><div class="details-content"><p class="hint">${esc(IIS_FIELD_GUIDANCE.durationNote)}</p><p class="hint">${esc(IIS_FIELD_GUIDANCE.fieldTip)}</p><p class="hint"><strong>Q2 注意：</strong>${esc(IIS_FIELD_GUIDANCE.caution)}</p></div></details>`:''}<div class="card"><h2>其他現場筆記</h2><textarea rows="7" data-note="ask${selectedDay}" placeholder="其他補充、照片編號、與會人員、待辦……">${esc(db.notes['ask'+selectedDay]||'')}</textarea>${photoWidget('visit:'+selectedDay)}</div>`;
 }
 function renderQuestionForm(id){const q=id==='new'?{text:''}:(db.questions[selectedDay]||[]).find(x=>x.id===id);return `<div class="card"><h2>${id==='new'?'新增提問':'修改提問'}</h2><form id="question-form" data-id="${attr(id)}"><textarea name="text" required placeholder="輸入想向日方提問的內容……">${esc(q?.text||'')}</textarea><div class="actions"><button class="btn" type="submit">儲存</button><button class="btn secondary" type="button" data-action="cancel-question">取消</button></div></form></div>`;}
 function isGiftGoal(s){return s.category==='gift'||(s.category!=='task'&&(s.id==='shop-3'||s.id==='shop-4'));}
@@ -452,7 +472,7 @@ function onClick(ev){if(tab==='secret'&&SecretShopping.click(ev))return;if(Explo
 function onSubmit(ev){if(Explore.submit(ev))return;const f=ev.target;if(!f.matches('form'))return;ev.preventDefault();const o=Object.fromEntries(new FormData(f));
  if(f.id==='event-form'){if(!o.title.trim())return;const id=f.dataset.id;if(id!=='new'&&getEvent(id)?.kind==='official'&&!unlockedEventIds.has(id)){toast('請先解鎖正式行程');return}const old=id==='new'?null:getEvent(id);const e={...(old||{}),id:old?.id||makeId('event'),day:selectedDay,time:o.time,end:o.end||'',title:o.title.trim(),place:o.place.trim(),kind:o.kind,status:o.status,timezone:o.timezone,nav:o.nav.trim(),detail:o.detail,edited:true};e.sortTime=e.timezone==='Asia/Taipei'?convertTaiwanToJst(e.time):e.time;if(old)Object.assign(old,e);else db.events.push(e);eventEditor=null;unlockedEventIds.delete(id);save();render();toast('行程已儲存');return}
  if(f.id==='travel-form'){const day=Number(f.dataset.day);db.meetings[day]={...db.meetings[day],depart:o.depart||'',origin:o.origin||'',route:o.route||'',note:o.note||''};editingTravel=false;save();render();toast('出發資訊已儲存');return}
- if(f.id==='question-form'){const old=oneQuestion(f.dataset.id);if(!o.text.trim())return;if(old){old.text=o.text.trim();old.title='自訂問題';old.purpose='';old.edited=true}else(db.questions[selectedDay]??=[]).push({id:makeId('q'),text:o.text.trim(),asked:false,answer:'',followup:'',edited:true});questionEditor=null;save();render();return}
+ if(f.id==='question-form'){const old=oneQuestion(f.dataset.id);if(!o.text.trim())return;if(old){old.text=o.text.trim();if(!old.title)old.title='自訂問題';old.edited=true}else(db.questions[selectedDay]??=[]).push({id:makeId('q'),text:o.text.trim(),asked:false,answer:'',followup:'',edited:true});questionEditor=null;save();render();return}
  if(f.id==='meal-form'){if(!o.area.trim()||!o.name.trim())return;const old=(db.meals[selectedDay]||[]).find(x=>x.id===f.dataset.id);if(old){old.area=o.area.trim();old.name=o.name.trim();old.edited=true}else(db.meals[selectedDay]??=[]).push({id:makeId('meal'),area:o.area.trim(),name:o.name.trim(),edited:true});editingMeal=null;save();render();return}
  if(f.id==='advance-form'){const amount=Number(o.advanceYen);if(!Number.isSafeInteger(amount)||amount<0){toast('公司預支款須為非負整數日圓');return}db.advanceYen=amount;save();render();toast('預支款基準已更新（非支出）');return}
  if(f.id==='cost-form'){const amount=Number(o.amount);if(!Number.isSafeInteger(amount)||amount<=0){toast('金額須為正整數日圓');return}if(!['company_cash','personal_cash','personal_suica','personal_card','other'].includes(o.fundSource)){toast('請選擇資金來源');return}const issue=fundingIssue(o.fundSource,o.method,o.type);if(issue){toast(issue);return}db.expenses.push({id:makeId('cost'),day:Number(o.day),type:o.type,method:o.method,fundSource:o.fundSource,amount,title:o.title.trim()});save();render();toast('已記錄費用');return}
