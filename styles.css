@@ -147,3 +147,20 @@
 .secret-shop-hint{font-size:12px;line-height:1.6;color:#536a7e;background:#f1f5f9;border-radius:8px;padding:9px;margin:12px 0 4px}
 .secret-store-actions{margin:10px 0 12px}
 @media(max-width:380px){.secret-shop-count{font-size:11px;padding:5px 6px}.secret-shop-label strong{font-size:13px}.secret-shop-jumps{gap:6px}.secret-shop-jumps .btn{padding:8px 9px}}
+
+/* 2026-11-15: Actual completion time per itinerary event (independent of planned event data). */
+.day-progress-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.day-progress-heading h2{margin:0;line-height:1.5}
+#event-progress-count{flex:0 0 auto;font-size:12px;font-weight:700;color:#28745c;background:#e5f3ed;border-radius:8px;padding:6px 9px}
+.event-is-done .evt-title{color:#41675a}.event-is-done .timecol{border-color:#40896a}
+.event-completion{margin:9px 0 8px;padding:9px 10px;border:1px solid #dde8ed;border-radius:10px;background:#f8fbfd}
+.event-completion.event-completed{border-color:#b8dfd0;background:#f1f9f5}
+.event-completion-check{display:flex;align-items:center;gap:10px;min-height:38px;cursor:pointer;font-size:14px;font-weight:720}
+.event-completion-check input[type=checkbox]{width:22px;height:22px;flex:0 0 22px;accent-color:#237454;margin:0}
+.event-completion-check span{line-height:1.4}.event-completed .event-completion-check span{color:#196b50}
+.event-completion-editor{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin:8px 0 1px;min-width:0}
+.event-completion-time-label{display:flex;flex:1 1 170px;flex-direction:column;gap:5px;font-size:12px;color:#35546a;min-width:0}
+.event-completion-time-label input[type=datetime-local]{width:100%;min-width:0;min-height:44px;padding:8px 9px;background:#fff;border:1px solid #bed1dc;border-radius:8px;color:#1d3246;font-size:14px}
+.event-now-btn{min-height:44px;flex:0 0 auto}
+.event-completion.cancelled{color:#7e8994;font-size:12px;padding:6px 0}
+@media(max-width:390px){.event-completion{padding:8px}.event-completion-editor{display:grid;grid-template-columns:minmax(0,1fr);gap:7px}.event-now-btn{justify-self:start}.day-progress-heading h2{font-size:15px}}
