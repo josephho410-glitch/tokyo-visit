@@ -92,3 +92,14 @@ iPhone Safari 開啟 https://josephho410-glitch.github.io/tokyo-visit/ → 分�
 - **上野 Yamashiroya** 已有 Keroro 娃娃／吊飾、文具、貼紙與小周邊。新收到的紅圈照片指定需求加入既有 k4／k5／k6／k7 注意事項，型號辨識不清，應出示原圖比對；**不建立重複待買商品**。
 - 獨立代購總數從 **17 → 19**、分店從 **5 → 6**。保留所有既有商品 ID、既有勾選與數量、獨立 localStorage key `tokyo-visit-secret-shopping-v1` 及 JSON 備份格式；新版首次載入僅為 k11、u1 加上空白狀態。
 - 同一商品可在多個店家候選顯示，但進度只計一次；未將代購資料導入一般伴手禮、記帳或首頁倒數。 Service Worker 更新鍵為 `tokyo-visit-v2.9-20261114-secret-newitems-r7`。
+
+
+## 2026/11/15｜行程完成勾選與實際時間
+
+- 「行程」中每筆非取消行程新增 **標記完成**。點選後以目前時刻自動填入該活動原時區的實際完成日期與時間；可使用 iPhone 日期／時間選取器自行更正，也可按「改為現在」。
+- 11/15 臺灣 Uber、臺灣出境航班維持 **Asia/Taipei**；日本行程使用 **Asia/Tokyo**。日期時間保存為各行程當地時間（`YYYY-MM-DDTHH:mm`），明確標示時區，避免跨時區混淆。
+- 行程右側顯示當天「已完成 X／Y 項」，已取消的行程不列入。取消勾選會清除該項實際完成時間；不改動原本預定時間。
+- 紀錄獨立存於原 `db.eventProgress`，以行程 ID 對應，每筆有 `done`、`completedAt` 與 `timezone`。不寫入原 `DEFAULT_EVENTS`，也不將預設行程標成 `edited`。升級 `normalize` 保留舊資料並過濾無效時間；`refreshSeed` 僅更新未編輯行程，不會覆蓋完成時間。
+- 原行程時間軸、新增／編輯／解鎖正式行程、首頁下一行程及正式集合倒數、紀錄、照片、購物、記帳均維持原樣。
+- 原 JSON 及完整照片 ZIP 備份內的 `data` 自動包含 `eventProgress`，舊版 JSON／ZIP 沒有此欄位仍能還原；`schema:2`、`STORE`、`PhotoVault` 皆不變。
+- Service Worker 快取更新為 `tokyo-visit-v2.9-20261115-actual-completion-r8`。在 iPhone Safari 更新前請先備份，更新後測試勾選／改時間／重開／離線。
