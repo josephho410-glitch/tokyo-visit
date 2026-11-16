@@ -6,10 +6,10 @@ const Explore=(function ExploreFactory(){
  const SCHEDULE={
   0:[[0,'kanda'],[12,'haneda'],[15,'akihabara'],[18,'tokyo']],
   1:[[0,'kanda'],[9,'komaba'],[14,'ryogoku'],[16,'oshiage']],
-  2:[[0,'kanda'],[8,'tsukiji'],[11,'daimon'],[17,'harajuku']],
-  3:[[0,'kanda'],[7,'kenkyu'],[13,'kanda'],[15,'ueno']],
-  4:[[0,'kanda'],[8,'kunitachi'],[16,'kanda'],[18,'asakusa']],
-  5:[[0,'kanda'],[8,'mitaka'],[12,'kichijoji'],[15,'kanda'],[16,'tower'],[18,'roppongi']],
+  2:[[0,'kanda'],[9,'tsukiji'],[11,'daimon'],[18,'roppongi'],[20,'kanda']],
+  3:[[0,'kanda'],[6,'akihabara'],[7,'kenkyu'],[14,'akihabara'],[16,'ueno'],[19,'kanda']],
+  4:[[0,'kanda'],[11,'kunitachi'],[16,'kanda'],[19,'asakusa'],[21,'kanda']],
+  5:[[0,'kanda'],[8,'mitaka'],[13,'harajuku'],[17,'tokyo'],[19,'kanda']],
   6:[[0,'kanda'],[10,'haneda']]
  };
  const TOKYO_ORDER=['giftitem-audrey','gift-fujimi','giftitem-sabrina','giftitem-pista'];
@@ -243,7 +243,7 @@ function areaForDay(day){return ({0:'akihabara',1:'ryogoku',2:'daimon',3:'kenkyu
 function dayHint(day){
  const area=day===getDay()?currentArea():areaForDay(day);
  const count=compileFood().filter(p=>p.days.includes(day)).length;
- const hasTokyo=(day===0||day===2||day===6);
+ const hasTokyo=(day===0||day===5||day===6);
  return `<div class="card" id="food-spots"><h2>當日沿途餐廳與採買探索</h2><p class="muted">資料庫保留原本 ${count} 間當日餐廳及自訂項目；可依現在所在地重新排序，不會更動正式參訪行程。</p><div class="actions"><button class="btn" data-explore="day-food" data-day="${day}" data-area="${attr(area)}">查看附近餐廳</button><button class="btn secondary" data-explore="day-gifts" data-day="${day}" data-area="${attr(area)}">查看伴手禮</button></div>${hasTokyo?'<p class="hint">若經過東京站，可開啟「開始東京站採買」，離開前再檢查未完成商品。</p>':''}</div>`;
 }
 function homeWidget(){
