@@ -52,8 +52,8 @@ function refreshVisitQuestions(d,key){
   return;
  }
  if(key==='3'){
-  // Entirely different policy questions: do not transfer the answers from the seven
-  // technical questions by ordinal position. They belong in the historical notes.
+  // Today's technical-tour questions replace old policy and technical defaults.
+  // Archive old answers by ID, never map by question number.
   const wanted=DEFAULT_QUESTIONS[3]||[];
   const lookup=new Map(old.filter(Boolean).map(q=>[q.id,q]));
   const active=wanted.filter(q=>!d.deletedQuestionIds.includes(q.id)).map(q=>{
@@ -63,7 +63,7 @@ function refreshVisitQuestions(d,key){
   });
   for(const q of old){
    if(!q||wanted.some(x=>x.id===q.id))continue;
-   const oldPreset=/^q-toda-[1-7]$/.test(String(q.id||''));
+   const oldPreset=/^q-toda-(?:[1-7]|policy-[1-5])$/.test(String(q.id||''));
    if(oldPreset){
     if(q.answer||q.followup||q.asked||q.edited)appendArchivedQuestion(d,key,q);
    }else active.push(q); // Retain user-added questions.
@@ -76,8 +76,8 @@ function refreshSeed(d){ // Refresh only untouched default items. All user edits
  d.events=d.events.filter(e=>!RETIRED_DEFAULT_EVENT_IDS.includes(e.id)||e.edited);
  const defaults=DEFAULT_EVENTS.filter(e=>!d.deletedEventIds.includes(e.id)).map(e=>{let old=oldEvents.get(e.id);return old?.edited?old:COPY(e)});
  d.events=[...defaults,...d.events.filter(e=>!DEFAULT_EVENTS.some(s=>s.id===e.id)&&(!RETIRED_DEFAULT_EVENT_IDS.includes(e.id)||e.edited))];
- // Replace IIS questions with the 11/16 visit result and Toda's seven technical
- // questions with five policy-management questions; archive only user-entered old content.
+ // Retain IIS results and refresh Toda's latest five technical-tour questions.
+ // Preserve user-entered previous questions through the notes archive.
  refreshVisitQuestions(d,'1');
  refreshVisitQuestions(d,'3');
  // Preserve the existing behavior for visits without an authored question sheet.
@@ -321,8 +321,8 @@ function buildVisitMarkdown(day,photos=[]){
  }else if(day===3){
   lines.push('## 交流議題與紀錄','');
   for(const [i,q] of questions.entries())lines.push(`### ${i+1}. ${q.title||q.text}`,
-   ...(q.priority?['**提問優先**：'+q.priority]:[]),'**完整提問**',q.text||'',
-   ...(q.purpose?['**希望帶回的政策資訊**',q.purpose]:[]),
+   ...(q.priority?['**提問優先**：'+q.priority]:[]),...(q.when?['**適合提問時機**：'+q.when]:[]),'**完整提問**',q.text||'',
+   ...(q.purpose?['**希望帶回的資訊**',q.purpose]:[]),
    '**已詢問**：'+(q.asked?'是':'否'),'**日方回答及技術數據**',q.answer||'（尚未填寫）',
    '**後續追蹤**',q.followup||'（尚未填寫）','');
   lines.push('## 戶田參訪準備提醒',TODA_POLICY_GUIDANCE.agenda,TODA_POLICY_GUIDANCE.order,
@@ -376,13 +376,13 @@ function renderAsk(){
  const q=owned?(db.questions[selectedDay]||[]):[];
  const meeting=db.meetings[selectedDay];
  const visitName=meeting?(getEvent(meeting.visitId)?.title||'參訪紀錄'):'';
- const topics=selectedDay===3?'施工噪音自主管理、加強管理條件、事前預測如何納入決策、自主監測與制度誘因':'';
+ const topics=selectedDay===3?'新技術導入工地、實驗與現地驗證、改善技術選擇、推廣價值、政策誘因':'';
  if(!owned){
   const title=meeting?esc(visitName):'個人行程／交通筆記';
   return `<div class="sectionhead"><h2>${displayDay(selectedDay)} 現場筆記</h2></div><div class="card"><h2>${title}</h2><p class="muted">${meeting?'這場參訪不需要你準備問題，直接記錄重要資訊即可。':'可記錄交通、購物、行李與其他個人事項。'}內容會自動儲存於本機。</p><label for="free-note">參訪內容、數據、日方說明與待辦事項</label><textarea id="free-note" data-note="ask${selectedDay}" rows="13" placeholder="在此輸入現場筆記、重點、照片編號、待追蹤事項……">${esc(db.notes['ask'+selectedDay]||'')}</textarea>${photoWidget('visit:'+selectedDay)}<div class="actions"><button class="btn secondary smallbtn" data-action="export-visit" data-day="${selectedDay}">匯出本場紀錄 MD</button><button class="btn ghost smallbtn" data-action="copy-visit" data-day="${selectedDay}">複製紀錄</button></div></div>`;
  }
- return `<div class="sectionhead"><h2>${displayDay(selectedDay)} 交流問題（${q.length} 題）</h2><button class="btn" data-action="edit-question" data-id="new">＋ 新增</button></div><div class="card"><strong>${esc(visitName)}</strong><p class="muted">依 11/17 最新準備資料：5 題自主噪音管理與政策層級備用提問。日方主導參訪議程，可視導覽與交流時間決定是否提問。</p><div class="hint">重點：${esc(topics)}</div><div class="actions"><button class="btn secondary smallbtn" data-action="export-visit" data-day="${selectedDay}">匯出本場紀錄 MD</button><button class="btn ghost smallbtn" data-action="copy-visit" data-day="${selectedDay}">複製紀錄</button></div></div>${questionEditor!==null?renderQuestionForm(questionEditor):''}
- <div class="card">${q.length?q.map((v,i)=>`<div class="question"><div class="row" style="align-items:flex-start"><input type="checkbox" aria-label="此題已詢問" data-asked="${attr(v.id)}" ${v.asked?'checked':''}><div class="grow"><div class="row wrap"><span class="pill ${v.category==='extended'?'unconfirmed':'confirmed'}">${v.category==='extended'?'延伸議題':'主要議題'}</span>${v.priority?`<span class="pill">${esc(v.priority)}</span>`:''}${v.discussionTime?`<span class="mini-note">${esc(v.discussionTime)}</span>`:''}</div><div class="qa-title ${v.asked?'readonly':''}">${i+1}. ${esc(v.title||v.text)}</div></div></div>${v.title?`<details class="question-details"><summary>${v.background?'查看背景說明與完整提問':'查看完整問句與交流目的'}</summary>${v.background?`<p class="muted preline"><strong>背景說明：</strong>\n${esc(v.background)}</p>`:''}<p class="preline"><strong>${v.background?'想請教教授：':'原始問題：'}</strong>\n${esc(v.text)}</p>${v.purpose?`<p class="muted preline"><strong>希望帶回的政策資訊：</strong>${esc(v.purpose)}</p>`:''}</details>`:''}<div class="qa-input"><label for="answer-${attr(v.id)}">日方回答／技術數據</label><textarea id="answer-${attr(v.id)}" rows="3" data-qfield="answer" data-qid="${attr(v.id)}" placeholder="量測條件、降噪 dB、回答摘要……">${esc(v.answer||'')}</textarea></div><div class="qa-input"><label for="follow-${attr(v.id)}">後續追蹤事項</label><textarea id="follow-${attr(v.id)}" rows="2" data-qfield="followup" data-qid="${attr(v.id)}" placeholder="索取簡報、相關文獻、適用於臺灣的建議……">${esc(v.followup||'')}</textarea></div><div class="actions"><button class="btn secondary smallbtn" data-action="edit-question" data-id="${attr(v.id)}">修改問題</button><button class="btn danger smallbtn" data-action="delete-question" data-id="${attr(v.id)}">刪除</button></div></div>`).join(''):'<div class="empty">沒有預設提問，可自行新增。</div>'}</div><details class="card quiet-details"><summary>參訪流程、優先順序與提問建議</summary><div class="details-content"><p class="hint">${esc(TODA_POLICY_GUIDANCE.agenda)}</p><p class="hint">${esc(TODA_POLICY_GUIDANCE.order)}</p><p class="hint"><strong>只問一題時：</strong>${esc(TODA_POLICY_GUIDANCE.key)}</p><p class="hint"><strong>管理流程：</strong>${esc(TODA_POLICY_GUIDANCE.workflow)}</p><p class="hint">${esc(TODA_POLICY_GUIDANCE.context)}</p></div></details><div class="card"><h2>其他現場筆記</h2><textarea rows="7" data-note="ask${selectedDay}" placeholder="其他補充、照片編號、與會人員、待辦……">${esc(db.notes['ask'+selectedDay]||'')}</textarea>${photoWidget('visit:'+selectedDay)}</div>`;
+ return `<div class="sectionhead"><h2>${displayDay(selectedDay)} 交流問題（${q.length} 題）</h2><button class="btn" data-action="edit-question" data-id="new">＋ 新增</button></div><div class="card"><strong>${esc(visitName)}</strong><p class="muted">依 11/18 最新「新技術導覽版」：5 題備用交流問題，依現場展示技術決定是否提問，不必全部問。</p><div class="hint">重點：${esc(topics)}</div><div class="actions"><button class="btn secondary smallbtn" data-action="export-visit" data-day="${selectedDay}">匯出本場紀錄 MD</button><button class="btn ghost smallbtn" data-action="copy-visit" data-day="${selectedDay}">複製紀錄</button></div></div>${questionEditor!==null?renderQuestionForm(questionEditor):''}
+ <div class="card">${q.length?q.map((v,i)=>`<div class="question"><div class="row" style="align-items:flex-start"><input type="checkbox" aria-label="此題已詢問" data-asked="${attr(v.id)}" ${v.asked?'checked':''}><div class="grow"><div class="row wrap"><span class="pill ${v.category==='extended'?'unconfirmed':'confirmed'}">${v.category==='extended'?'延伸議題':'主要議題'}</span>${v.priority?`<span class="pill">${esc(v.priority)}</span>`:''}${v.discussionTime?`<span class="mini-note">${esc(v.discussionTime)}</span>`:''}</div><div class="qa-title ${v.asked?'readonly':''}">${i+1}. ${esc(v.title||v.text)}</div></div></div>${v.when?`<p class="hint"><strong>適合提問時機：</strong>${esc(v.when)}</p>`:''}${v.title?`<details class="question-details"><summary>${v.background?'查看背景說明與完整提問':'查看完整提問與希望帶回的資訊'}</summary>${v.background?`<p class="muted preline"><strong>背景說明：</strong>\n${esc(v.background)}</p>`:''}<p class="preline"><strong>${v.background?'想請教教授：':'想請教戶田：'}</strong>\n${esc(v.text)}</p>${v.purpose?`<p class="muted preline"><strong>希望帶回的資訊：</strong>${esc(v.purpose)}</p>`:''}</details>`:''}<div class="qa-input"><label for="answer-${attr(v.id)}">日方回答／技術數據</label><textarea id="answer-${attr(v.id)}" rows="3" data-qfield="answer" data-qid="${attr(v.id)}" placeholder="量測條件、降噪 dB、回答摘要……">${esc(v.answer||'')}</textarea></div><div class="qa-input"><label for="follow-${attr(v.id)}">後續追蹤事項</label><textarea id="follow-${attr(v.id)}" rows="2" data-qfield="followup" data-qid="${attr(v.id)}" placeholder="索取簡報、相關文獻、適用於臺灣的建議……">${esc(v.followup||'')}</textarea></div><div class="actions"><button class="btn secondary smallbtn" data-action="edit-question" data-id="${attr(v.id)}">修改問題</button><button class="btn danger smallbtn" data-action="delete-question" data-id="${attr(v.id)}">刪除</button></div></div>`).join(''):'<div class="empty">沒有預設提問，可自行新增。</div>'}</div><details class="card quiet-details"><summary>參訪流程、優先順序與提問建議</summary><div class="details-content"><p class="hint">${esc(TODA_POLICY_GUIDANCE.agenda)}</p><p class="hint">${esc(TODA_POLICY_GUIDANCE.order)}</p><p class="hint"><strong>只問一題時：</strong>${esc(TODA_POLICY_GUIDANCE.key)}</p><p class="hint"><strong>分析架構：</strong>${esc(TODA_POLICY_GUIDANCE.workflow)}</p><p class="hint">${esc(TODA_POLICY_GUIDANCE.context)}</p></div></details><div class="card"><h2>其他現場筆記</h2><textarea rows="7" data-note="ask${selectedDay}" placeholder="其他補充、照片編號、與會人員、待辦……">${esc(db.notes['ask'+selectedDay]||'')}</textarea>${photoWidget('visit:'+selectedDay)}</div>`;
 }
 function renderQuestionForm(id){const q=id==='new'?{text:''}:(db.questions[selectedDay]||[]).find(x=>x.id===id);return `<div class="card"><h2>${id==='new'?'新增提問':'修改提問'}</h2><form id="question-form" data-id="${attr(id)}"><textarea name="text" required placeholder="輸入想向日方提問的內容……">${esc(q?.text||'')}</textarea><div class="actions"><button class="btn" type="submit">儲存</button><button class="btn secondary" type="button" data-action="cancel-question">取消</button></div></form></div>`;}
 function isGiftGoal(s){return s.category==='gift'||(s.category!=='task'&&(s.id==='shop-3'||s.id==='shop-4'));}
