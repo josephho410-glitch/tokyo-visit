@@ -97,6 +97,34 @@ function refreshSeed(d){ // Refresh only untouched default items. All user edits
  for(const key of Object.keys(DEFAULT_MEETINGS))if(!d.meetings[key])d.meetings[key]=COPY(DEFAULT_MEETINGS[key]);
  d.seedRev=SEED_REV;return d;
 }
+function legacyUpgrade(old){const x=baseData();x.legacyImported=true;
+ if(Array.isArray(old.shopping))x.shopping=old.shopping.map((s,i)=>({...s,id:'legacy-shop-'+i}));
+ if(Array.isArray(old.expenses))x.expenses=COPY(old.expenses);
+ if(old.notes&&typeof old.notes==='object')x.notes=COPY(old.notes);
+ if(Array.isArray(old.events)){
+  for(const e of old.events){const signature=[e.day,e.time,e.title].join('|');if(LEGACY_DEFAULT_EVENT_KEYS.has(signature))continue;
+   const id=makeId('legacy-event');x.events.push({id,day:Number(e.day)||0,time:e.time||'12:00',end:e.end||'',title:e.title||'舊版自訂行程',place:e.place||'',kind:e.kind==='official'?'plan':(e.kind==='optional'?'free':e.kind||'free'),status:'unconfirmed',detail:(e.detail||'')+'\n【由舊版保留，請核對是否仍需安排】',edited:true,legacy:true});
+  }
+ }
+ if(old.checkedQuestions&&typeof old.checkedQuestions==='object'){for(const [key,checked] of Object.entries(old.checkedQuestions)){if(!checked)continue;const [day,idx]=key.split(':').map(Number);const sourceQ=old.questions?.[day]?.[idx];const match=(x.questions[day]||[]).find(q=>q.text===sourceQ);if(match){match.asked=true;match.edited=true}}}
+ if(old.questions&&typeof old.questions==='object'){
+  for(const key of Object.keys(old.questions)){
+   if(!Array.isArray(old.questions[key]))continue;
+   for(const [index,q] of old.questions[key].entries()){
+    const checked=!!old.checkedQuestions?.[key+':'+index];
+    const preset=(LEGACY_DEFAULT_QUESTIONS[key]||[]).includes(q);
+    if(['2','4','5'].includes(key)){
+      if(!preset||checked)appendArchivedQuestion(x,key,{text:String(q),asked:checked});
+      continue;
+    }
+    if(preset)continue;
+    (x.questions[key]??=[]).push({id:makeId('legacy-q'),text:String(q),asked:checked,answer:'',followup:'',edited:true});
+   }
+  }
+ }
+ return x;
+}
+function safeLocalRead(key){try{const v=localStorage.getItem(key);return v?JSON.parse(v):null}catch{return null}}
 function initData(){const existing=safeLocalRead(STORE);if(existing){db=normalize(existing);if(db.seedRev!==SEED_REV){db=refreshSeed(db);save({silent:true})}return}
  const legacy=safeLocalRead(OLD_STORE);if(legacy&&Array.isArray(legacy.events)){try{localStorage.setItem(OLD_ARCHIVE,JSON.stringify(legacy))}catch{}db=legacyUpgrade(legacy)}else db=baseData();save({silent:true});}
 function save({silent=false}={}){try{localStorage.setItem(STORE,JSON.stringify(db));return true}catch{if(!silent)toast('儲存失敗：請立即匯出備份並檢查 Safari 儲存空間');return false}}
@@ -496,4 +524,14 @@ let swRegistration=null;
 async function installServiceWorker(){if(!('serviceWorker'in navigator)||!location.protocol.startsWith('http'))return;try{const reg=await navigator.serviceWorker.register('./sw.js');swRegistration=reg;const show=()=>{$('#update-banner').classList.remove('hidden');updatingWorker=reg.waiting};if(reg.waiting&&navigator.serviceWorker.controller)show();reg.addEventListener('updatefound',()=>{const worker=reg.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'&&navigator.serviceWorker.controller)show()})});navigator.serviceWorker.addEventListener('controllerchange',()=>{location.reload()});$('#update-now').addEventListener('click',()=>{if(updatingWorker){updatingWorker.postMessage({type:'SKIP_WAITING'})}else location.reload()});}catch(e){console.warn('SW failed',e)}}
 async function pickedPhotos(el){const files=Array.from(el.files||[]),link=photoLink;el.value='';if(!link||!files.length)return;try{toast('正在處理 '+files.length+' 張照片……');const n=await PhotoVault.addFiles(link,files);render();toast('已離線保存 '+n+' 張照片；請記得匯出完整 ZIP 備份');}catch(e){render();toast('照片儲存失敗：'+e.message)}}
 function start(){initData();selectedDay=japanNow().date==='2026-11-14'?-1:Math.max(0,dayIndex(japanNow().date));if(selectedDay<-1)selectedDay=0;render();$('#tabs').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b)chooseTab(b.dataset.tab)});$('#header-tools')?.addEventListener('click',()=>chooseTab('more'));$('#view').addEventListener('click',onClick);$('#days').addEventListener('click',onClick);$('#view').addEventListener('submit',onSubmit);$('#view').addEventListener('input',onInput);$('#view').addEventListener('change',onChange);for(const photoInput of ['photo-input','photo-camera'])document.getElementById(photoInput).addEventListener('change',e=>pickedPhotos(e.target));window.addEventListener('online',render);window.addEventListener('offline',render);document.addEventListener('visibilitychange',()=>{if(!document.hidden&&tab==='home')render()});setInterval(()=>{if(tab==='home'&&!document.hidden)render()},60000);installServiceWorker();if(db.legacyImported&&!sessionStorage.getItem('tokyo-v2-legacy-notice')){sessionStorage.setItem('tokyo-v2-legacy-notice','1');setTimeout(()=>toast('已保留舊版原始備份並移入個人資料；請檢查舊版自訂行程'),600)}}
-start();
+// A recoverable message replaces blank pages if startup fails. Keep user storage intact.
+try { start(); } catch (error) {
+ console.error('Tokyo Visit startup error', error);
+ const view=document.getElementById('view');
+ const sub=document.getElementById('subhead');
+ if(sub)sub.textContent='啟動失敗 · 請重新載入';
+ if(view){
+  view.innerHTML='<section class="card"><h2>手冊暫時無法載入</h2><p>可能是網站更新後的檔案版本不一致。請保持網路連線，重新載入手冊。</p><p class="hint">不要清除 Safari 網站資料或刪除 PWA，以免失去本機筆記、照片與購物紀錄。</p><button class="btn" id="retry-app-start" type="button">重新載入手冊</button></section>';
+  view.querySelector('#retry-app-start')?.addEventListener('click',()=>window.location.reload());
+ }
+}
