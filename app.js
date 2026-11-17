@@ -38,62 +38,58 @@ function appendArchivedQuestion(d,day,q){
  const key='ask'+day,old=String(d.notes[key]||'');
  if(!old.includes(lines))d.notes[key]=(old?old+'\n\n':'')+lines;
 }
+function refreshVisitQuestions(d,key){
+ const old=Array.isArray(d.questions[key])?d.questions[key]:[];
+ if(key==='1'){
+  // The IIS visit has finished. Remove all five obsolete prompts from the active view.
+  // Preserve any typed answers, follow-ups, custom questions, or manual edits in the existing note.
+  for(const q of old){
+   if(!q||typeof q!=='object')continue;
+   const isPreset=String(q.id||'').startsWith('q-iis-');
+   if(q.answer||q.followup||q.asked||q.edited||!isPreset)appendArchivedQuestion(d,key,q);
+  }
+  d.questions[key]=[];
+  return;
+ }
+ if(key==='3'){
+  // Entirely different policy questions: do not transfer the answers from the seven
+  // technical questions by ordinal position. They belong in the historical notes.
+  const wanted=DEFAULT_QUESTIONS[3]||[];
+  const lookup=new Map(old.filter(Boolean).map(q=>[q.id,q]));
+  const active=wanted.filter(q=>!d.deletedQuestionIds.includes(q.id)).map(q=>{
+   const p=lookup.get(q.id);
+   if(!p)return COPY(q);
+   return {...COPY(q),asked:!!p.asked,answer:p.answer||'',followup:p.followup||'',text:p.edited&&p.text?p.text:q.text,edited:!!p.edited};
+  });
+  for(const q of old){
+   if(!q||wanted.some(x=>x.id===q.id))continue;
+   const oldPreset=/^q-toda-[1-7]$/.test(String(q.id||''));
+   if(oldPreset){
+    if(q.answer||q.followup||q.asked||q.edited)appendArchivedQuestion(d,key,q);
+   }else active.push(q); // Retain user-added questions.
+  }
+  d.questions[key]=active;
+ }
+}
 function refreshSeed(d){ // Refresh only untouched default items. All user edits/custom entries survive.
  const oldEvents=new Map(d.events.map(e=>[e.id,e]));
- // Remove only retired, untouched preset train times. If a user edited them, preserve as custom records.
  d.events=d.events.filter(e=>!RETIRED_DEFAULT_EVENT_IDS.includes(e.id)||e.edited);
  const defaults=DEFAULT_EVENTS.filter(e=>!d.deletedEventIds.includes(e.id)).map(e=>{let old=oldEvents.get(e.id);return old?.edited?old:COPY(e)});
  d.events=[...defaults,...d.events.filter(e=>!DEFAULT_EVENTS.some(s=>s.id===e.id)&&(!RETIRED_DEFAULT_EVENT_IDS.includes(e.id)||e.edited))];
- // Source refresh: official 2026-11-12 question list only for IIS (day 1) and Toda (day 3).
- // Any answers/individual questions from JAMA, RTRI, NTSEL become plain notes rather than disappearing.
- for(const key of ['1','2','3','4','5']){
+ // Replace IIS questions with the 11/16 visit result and Toda's seven technical
+ // questions with five policy-management questions; archive only user-entered old content.
+ refreshVisitQuestions(d,'1');
+ refreshVisitQuestions(d,'3');
+ // Preserve the existing behavior for visits without an authored question sheet.
+ for(const key of ['2','4','5']){
   const old=Array.isArray(d.questions[key])?d.questions[key]:[];
-  const wanted=DEFAULT_QUESTIONS[key]||[];
-  const wantedIds=new Set(wanted.map(q=>q.id));
-  const found=new Map(old.map(q=>[q.id,q]));
-  if(key==='1'){
-   // 2026-11-15 source replaces the IIS five questions, with semantic (not ordinal) ID mapping.
-   const refreshed=wanted.filter(q=>!d.deletedQuestionIds.includes(q.id)).map(q=>{
-    const prev=found.get(q.id);if(!prev)return COPY(q);
-    const oldPreset=SUPERSEDED_IIS_QUESTION_TEXT[q.id];
-    const isPreviousPreset=prev.text===oldPreset||prev.text===PREVIOUS_DEFAULT_QUESTION_TEXT[q.id];
-    if(prev.edited&&prev.text&&prev.text!==q.text&&!isPreviousPreset){
-     // Keep user-written question edits in free notes while applying explicitly requested new wording.
-     appendArchivedQuestion(d,key,prev);
-    }
-    return {...COPY(q),asked:!!prev.asked,answer:prev.answer||'',followup:prev.followup||'',edited:false};
-   });
-   for(const q of old.filter(q=>!wantedIds.has(q.id))){
-    if(Object.prototype.hasOwnProperty.call(SUPERSEDED_IIS_QUESTION_TEXT,q.id)||
-       Object.prototype.hasOwnProperty.call(PREVIOUS_DEFAULT_QUESTION_TEXT,q.id)){
-      const modified=!!q.edited&&q.text!==SUPERSEDED_IIS_QUESTION_TEXT[q.id];
-      if(q.answer||q.followup||q.asked||modified)appendArchivedQuestion(d,key,q);
-    }else refreshed.push(q); // User-added records are preserved.
-   }
-   d.questions[key]=refreshed;
-  }else if(key==='3'){
-   const refreshed=wanted.filter(q=>!d.deletedQuestionIds.includes(q.id)).map(q=>{
-    const prev=found.get(q.id);if(!prev)return COPY(q);
-    const userChangedText=!!prev.text&&prev.text!==PREVIOUS_DEFAULT_QUESTION_TEXT[q.id]&&prev.text!==q.text;
-    return {...COPY(q),asked:!!prev.asked,answer:prev.answer||'',followup:prev.followup||'',text:userChangedText?prev.text:q.text,edited:!!prev.edited||userChangedText};
-   });
-   for(const q of old.filter(q=>!wantedIds.has(q.id))){
-    if(PREVIOUS_DEFAULT_QUESTION_TEXT[q.id]){
-     if(q.answer||q.followup||q.asked)appendArchivedQuestion(d,key,q);
-    }else refreshed.push(q);
-   }
-   d.questions[key]=refreshed;
-  }else{
-   for(const q of old){
-    const isOldPreset=Object.prototype.hasOwnProperty.call(PREVIOUS_DEFAULT_QUESTION_TEXT,q.id);
-    if(!isOldPreset||q.answer||q.followup||q.asked||
-       (q.text&&q.text!==PREVIOUS_DEFAULT_QUESTION_TEXT[q.id]))appendArchivedQuestion(d,key,q);
-   }
-   d.questions[key]=[];
+  for(const q of old){
+   const isOldPreset=Object.prototype.hasOwnProperty.call(PREVIOUS_DEFAULT_QUESTION_TEXT,q.id);
+   if(!isOldPreset||q.answer||q.followup||q.asked||
+      (q.text&&q.text!==PREVIOUS_DEFAULT_QUESTION_TEXT[q.id]))appendArchivedQuestion(d,key,q);
   }
+  d.questions[key]=[];
  }
- // V2.7: Old default meal suggestions duplicated the 23 curated restaurants.
- // Remove only unedited legacy presets; keep every custom or edited meal untouched.
  for(const key of Object.keys(DEFAULT_MEALS)){
   const old=Array.isArray(d.meals[key])?d.meals[key]:[];
   d.meals[key]=old.filter(m=>m&&(!/^meal-\d+-\d+$/.test(String(m.id))||m.edited));
@@ -101,34 +97,6 @@ function refreshSeed(d){ // Refresh only untouched default items. All user edits
  for(const key of Object.keys(DEFAULT_MEETINGS))if(!d.meetings[key])d.meetings[key]=COPY(DEFAULT_MEETINGS[key]);
  d.seedRev=SEED_REV;return d;
 }
-function legacyUpgrade(old){const x=baseData();x.legacyImported=true;
- if(Array.isArray(old.shopping))x.shopping=old.shopping.map((s,i)=>({...s,id:'legacy-shop-'+i}));
- if(Array.isArray(old.expenses))x.expenses=COPY(old.expenses);
- if(old.notes&&typeof old.notes==='object')x.notes=COPY(old.notes);
- if(Array.isArray(old.events)){
-  for(const e of old.events){const signature=[e.day,e.time,e.title].join('|');if(LEGACY_DEFAULT_EVENT_KEYS.has(signature))continue;
-   const id=makeId('legacy-event');x.events.push({id,day:Number(e.day)||0,time:e.time||'12:00',end:e.end||'',title:e.title||'舊版自訂行程',place:e.place||'',kind:e.kind==='official'?'plan':(e.kind==='optional'?'free':e.kind||'free'),status:'unconfirmed',detail:(e.detail||'')+'\n【由舊版保留，請核對是否仍需安排】',edited:true,legacy:true});
-  }
- }
- if(old.checkedQuestions&&typeof old.checkedQuestions==='object'){for(const [key,checked] of Object.entries(old.checkedQuestions)){if(!checked)continue;const [day,idx]=key.split(':').map(Number);const sourceQ=old.questions?.[day]?.[idx];const match=(x.questions[day]||[]).find(q=>q.text===sourceQ);if(match){match.asked=true;match.edited=true}}}
- if(old.questions&&typeof old.questions==='object'){
-  for(const key of Object.keys(old.questions)){
-   if(!Array.isArray(old.questions[key]))continue;
-   for(const [index,q] of old.questions[key].entries()){
-    const checked=!!old.checkedQuestions?.[key+':'+index];
-    const preset=(LEGACY_DEFAULT_QUESTIONS[key]||[]).includes(q);
-    if(['2','4','5'].includes(key)){
-      if(!preset||checked)appendArchivedQuestion(x,key,{text:String(q),asked:checked});
-      continue;
-    }
-    if(preset)continue;
-    (x.questions[key]??=[]).push({id:makeId('legacy-q'),text:String(q),asked:checked,answer:'',followup:'',edited:true});
-   }
-  }
- }
- return x;
-}
-function safeLocalRead(key){try{const v=localStorage.getItem(key);return v?JSON.parse(v):null}catch{return null}}
 function initData(){const existing=safeLocalRead(STORE);if(existing){db=normalize(existing);if(db.seedRev!==SEED_REV){db=refreshSeed(db);save({silent:true})}return}
  const legacy=safeLocalRead(OLD_STORE);if(legacy&&Array.isArray(legacy.events)){try{localStorage.setItem(OLD_ARCHIVE,JSON.stringify(legacy))}catch{}db=legacyUpgrade(legacy)}else db=baseData();save({silent:true});}
 function save({silent=false}={}){try{localStorage.setItem(STORE,JSON.stringify(db));return true}catch{if(!silent)toast('儲存失敗：請立即匯出備份並檢查 Safari 儲存空間');return false}}
@@ -310,12 +278,28 @@ function renderEvent(e){const tz=e.timezone==='Asia/Taipei'?'臺灣時間':'日�
 function renderEventForm(id){const e=id==='new'?{time:'12:00',end:'',title:'',place:'',detail:'',kind:'free',status:'planned',ja:'',nav:'',timezone:'Asia/Tokyo'}:getEvent(id);if(!e)return'';return `<div class="card" id="event-editor"><h2>${id==='new'?'新增行程':'編輯行程'}</h2><form id="event-form" data-id="${attr(id)}"><div class="grid2"><div class="field"><label>開始時間</label><input type="time" name="time" value="${attr(e.time)}" required></div><div><label>結束時間</label><input type="time" name="end" value="${attr(e.end||'')}"></div></div><label>名稱</label><input name="title" value="${attr(e.title)}" required maxlength="140"><label>地點／集合位置</label><input name="place" value="${attr(e.place)}"><div class="grid2"><div><label>類別</label><select name="kind">${Object.entries(kindNames).map(([k,v])=>`<option value="${k}" ${e.kind===k?'selected':''}>${v}</option>`).join('')}</select></div><div><label>狀態</label><select name="status">${Object.entries(statusNames).map(([k,v])=>`<option value="${k}" ${e.status===k?'selected':''}>${v}</option>`).join('')}</select></div></div><label>時區</label><select name="timezone"><option value="Asia/Tokyo" ${e.timezone!=='Asia/Taipei'?'selected':''}>日本時間（JST）</option><option value="Asia/Taipei" ${e.timezone==='Asia/Taipei'?'selected':''}>臺灣時間（TST）</option></select><label>導航搜尋字串（日文最佳）</label><input name="nav" value="${attr(e.nav||e.ja||e.place)}"><label>詳細備註</label><textarea name="detail">${esc(e.detail)}</textarea><div class="actions"><button class="btn" type="submit">儲存行程</button><button class="btn secondary" type="button" data-action="cancel-event">取消</button></div></form></div>`;}
 function renderMealForm(id){const m=id==='new'?{area:'',name:''}:(db.meals[selectedDay]||[]).find(x=>x.id===id);if(!m)return'';return `<form id="meal-form" data-id="${attr(id)}" style="margin:10px 0"><label>區域</label><input name="area" value="${attr(m.area)}" required><label>餐廳／候選料理</label><textarea name="name" required>${esc(m.name)}</textarea><div class="actions"><button class="btn" type="submit">儲存</button><button class="btn secondary" type="button" data-action="cancel-meal">取消</button></div></form>`;}
 function buildVisitMarkdown(day,photos=[]){
- const m=db.meetings[day],e=m?getEvent(m.visitId):null,meet=m?getEvent(m.eventId):null,questions=db.questions[day]||[];
- const lines=[`# 2026/11/${15+day}｜${e?.title||'現場筆記'}`,'',`- 日期：${TRIP_DATES[day]}`,`- 參訪地點：${e?.place||'—'}`,`- 集合地點及時間：${meet?meet.time+'　'+meet.place:'—'}`,'','## 交流議題與紀錄',''];
- if([1,3].includes(day)){
-  for(const [i,q] of questions.entries())lines.push(`### ${i+1}. ${q.title||q.text}`,...(q.priority?['**優先程度**：'+q.priority,'**建議討論時間**：'+q.discussionTime]:[]),...(q.background?['**背景說明**',q.background,'']:[]),'**原始問題**',q.text||'',...(q.purpose?['**交流目的**',q.purpose]:[]),'**已詢問**：'+(q.asked?'是':'否'),'**日方回答及技術數據**',q.answer||'（尚未填寫）','**後續追蹤**',q.followup||'（尚未填寫）','');
-   if(day===1)lines.push('## 現場使用建議',IIS_FIELD_GUIDANCE.durationNote,IIS_FIELD_GUIDANCE.fieldTip,IIS_FIELD_GUIDANCE.caution,'');
- }else lines.push('本場未預載交流問題，以自由筆記為主。','');
+ const m=db.meetings[day],ev=m?getEvent(m.visitId):null,meet=m?getEvent(m.eventId):null;
+ const questions=db.questions[day]||[];
+ const r=IIS_VISIT_REPORT;
+ const lines=[`# 2026/11/${15+day}｜${day===1?r.title:(ev?.title||'現場筆記')}`,'',
+  `- 日期：${TRIP_DATES[day]}`,`- 參訪地點：${ev?.place||'—'}`,
+  `- 集合時間及地點：${meet?meet.time+'　'+meet.place:'—'}`,''];
+ if(day===1){
+  lines.push(`- 正式交流：${r.start}–${r.end}`,`- 對象：${r.people}`,'',
+    '## 六項主要觀察',...r.highlights.map((v,i)=>`${i+1}. ${v}`),'',
+    '## 實際參訪內容','');
+  for(const part of r.sections)lines.push(`### ${part.title}`,'',part.body,'');
+  lines.push('## 紀錄整理限制',r.sourceNote,'');
+ }else if(day===3){
+  lines.push('## 交流議題與紀錄','');
+  for(const [i,q] of questions.entries())lines.push(`### ${i+1}. ${q.title||q.text}`,
+   ...(q.priority?['**提問優先**：'+q.priority]:[]),'**完整提問**',q.text||'',
+   ...(q.purpose?['**希望帶回的政策資訊**',q.purpose]:[]),
+   '**已詢問**：'+(q.asked?'是':'否'),'**日方回答及技術數據**',q.answer||'（尚未填寫）',
+   '**後續追蹤**',q.followup||'（尚未填寫）','');
+  lines.push('## 戶田參訪準備提醒',TODA_POLICY_GUIDANCE.agenda,TODA_POLICY_GUIDANCE.order,
+   TODA_POLICY_GUIDANCE.key,TODA_POLICY_GUIDANCE.workflow,TODA_POLICY_GUIDANCE.context,'');
+ }else lines.push('## 交流議題與紀錄','本場未預載交流問題，以自由筆記為主。','');
  lines.push('## 現場補充筆記',db.notes['ask'+day]||'（尚未填寫）','','## 照片索引');
  const ps=photos.filter(x=>x.link==='visit:'+day);
  if(ps.length)ps.forEach((x,i)=>lines.push(`${i+1}. ${x.caption||x.name||'未命名照片'} [${x.id}]`));
@@ -331,18 +315,46 @@ async function exportVisitRecord(day,copy=false){
  await shareOrDownload(new Blob([md],{type:'text/markdown;charset=utf-8'}),`東京參訪_${TRIP_DATES[day]}_參訪紀錄.md`);
  toast('已匯出 Markdown；照片原檔請另外備份');
 }
+function renderIisVisitReport(){
+ const r=IIS_VISIT_REPORT;
+ const userNote=db.notes.ask1||'';
+ const highlights=r.highlights.map((v,i)=>`<p class="hint"><strong>${i+1}.</strong> ${esc(v)}</p>`).join('');
+ const chapters=r.sections.map((v,i)=>`<details class="card quiet-details visit-report-section" ${i===1?'open':''}>
+  <summary>${esc(v.title)}</summary>
+  <div class="details-content"><p class="preline">${esc(v.body)}</p></div>
+ </details>`).join('');
+ return `<div class="sectionhead"><h2>${displayDay(1)} 東大參訪成果</h2></div>
+  <div class="card visit-report-summary"><h2>${esc(r.title)}</h2>
+   <p class="muted">${esc(r.date)} ${esc(r.start)}–${esc(r.end)} · ${esc(r.place)}</p>
+   <p class="muted"><strong>交流對象：</strong>${esc(r.people)}</p>
+   <p class="muted"><strong>議題：</strong>${esc(r.topics)}</p>
+   <p class="hint">已完成的正式參訪紀錄，依現場交流和實驗室參觀整理；舊版行前交流問題已從預設畫面移除。</p>
+   <div class="actions"><button class="btn secondary smallbtn" data-action="export-visit" data-day="1">匯出參訪成果 MD</button>
+    <button class="btn ghost smallbtn" data-action="copy-visit" data-day="1">複製參訪成果</button></div>
+  </div>
+  <div class="card"><h2>六項主要觀察</h2>${highlights}</div>
+  <div class="sectionhead"><h2>完整參訪紀錄（${r.sections.length} 節）</h2></div>
+  ${chapters}
+  <div class="card"><h2>記錄依據與限制</h2><p class="hint">${esc(r.sourceNote)}</p></div>
+  <div class="card"><h2>補充筆記與後續事項</h2>
+   <p class="mini-note">你原本寫的現場筆記、舊提問已填內容會保留在下方，不覆蓋。</p>
+   <textarea rows="10" data-note="ask1" placeholder="補充新的參訪發現、取得資料及後續追蹤……">${esc(userNote)}</textarea>
+   ${photoWidget('visit:1')}
+  </div>`;
+}
 function renderAsk(){
- const owned=selectedDay===1||selectedDay===3;
+ if(selectedDay===1)return renderIisVisitReport();
+ const owned=selectedDay===3;
  const q=owned?(db.questions[selectedDay]||[]):[];
  const meeting=db.meetings[selectedDay];
  const visitName=meeting?(getEvent(meeting.visitId)?.title||'參訪紀錄'):'';
- const topics=selectedDay===1?'低噪音工具、固體傳播音、主觀干擾、室內外適用性、施工現場改善建議':selectedDay===3?'Edge Silencer、凍結樁頭處理、TANC、工地噪音量測與自主管理':'';
+ const topics=selectedDay===3?'施工噪音自主管理、加強管理條件、事前預測如何納入決策、自主監測與制度誘因':'';
  if(!owned){
   const title=meeting?esc(visitName):'個人行程／交通筆記';
   return `<div class="sectionhead"><h2>${displayDay(selectedDay)} 現場筆記</h2></div><div class="card"><h2>${title}</h2><p class="muted">${meeting?'這場參訪不需要你準備問題，直接記錄重要資訊即可。':'可記錄交通、購物、行李與其他個人事項。'}內容會自動儲存於本機。</p><label for="free-note">參訪內容、數據、日方說明與待辦事項</label><textarea id="free-note" data-note="ask${selectedDay}" rows="13" placeholder="在此輸入現場筆記、重點、照片編號、待追蹤事項……">${esc(db.notes['ask'+selectedDay]||'')}</textarea>${photoWidget('visit:'+selectedDay)}<div class="actions"><button class="btn secondary smallbtn" data-action="export-visit" data-day="${selectedDay}">匯出本場紀錄 MD</button><button class="btn ghost smallbtn" data-action="copy-visit" data-day="${selectedDay}">複製紀錄</button></div></div>`;
  }
- return `<div class="sectionhead"><h2>${displayDay(selectedDay)} 交流問題（${q.length} 題）</h2><button class="btn" data-action="edit-question" data-id="new">＋ 新增</button></div><div class="card"><strong>${esc(visitName)}</strong><p class="muted">${selectedDay===1?'依 11/15 更新的坂本教授五題交流資料：3 題必問、1 題視時間、1 題最後請教。每題完整背景與提問可展開閱讀。':'依《日本參訪說明》：4 題主要議題及 3 題延伸議題。逐題可以記錄日方回答。'}</p><div class="hint">重點：${esc(topics)}</div><div class="actions"><button class="btn secondary smallbtn" data-action="export-visit" data-day="${selectedDay}">匯出本場紀錄 MD</button><button class="btn ghost smallbtn" data-action="copy-visit" data-day="${selectedDay}">複製紀錄</button></div></div>${questionEditor!==null?renderQuestionForm(questionEditor):''}
- <div class="card">${q.length?q.map((v,i)=>`<div class="question"><div class="row" style="align-items:flex-start"><input type="checkbox" aria-label="此題已詢問" data-asked="${attr(v.id)}" ${v.asked?'checked':''}><div class="grow"><div class="row wrap"><span class="pill ${v.category==='extended'?'unconfirmed':'confirmed'}">${v.category==='extended'?'延伸議題':'主要議題'}</span>${v.priority?`<span class="pill">${esc(v.priority)}</span>`:''}${v.discussionTime?`<span class="mini-note">${esc(v.discussionTime)}</span>`:''}</div><div class="qa-title ${v.asked?'readonly':''}">${i+1}. ${esc(v.title||v.text)}</div></div></div>${v.title?`<details class="question-details"><summary>${v.background?'查看背景說明與完整提問':'查看完整問句與交流目的'}</summary>${v.background?`<p class="muted preline"><strong>背景說明：</strong>\n${esc(v.background)}</p>`:''}<p class="preline"><strong>${v.background?'想請教教授：':'原始問題：'}</strong>\n${esc(v.text)}</p>${v.purpose?`<p class="muted preline"><strong>交流目的：</strong>${esc(v.purpose)}</p>`:''}</details>`:''}<div class="qa-input"><label for="answer-${attr(v.id)}">日方回答／技術數據</label><textarea id="answer-${attr(v.id)}" rows="3" data-qfield="answer" data-qid="${attr(v.id)}" placeholder="量測條件、降噪 dB、回答摘要……">${esc(v.answer||'')}</textarea></div><div class="qa-input"><label for="follow-${attr(v.id)}">後續追蹤事項</label><textarea id="follow-${attr(v.id)}" rows="2" data-qfield="followup" data-qid="${attr(v.id)}" placeholder="索取簡報、相關文獻、適用於臺灣的建議……">${esc(v.followup||'')}</textarea></div><div class="actions"><button class="btn secondary smallbtn" data-action="edit-question" data-id="${attr(v.id)}">修改問題</button><button class="btn danger smallbtn" data-action="delete-question" data-id="${attr(v.id)}">刪除</button></div></div>`).join(''):'<div class="empty">沒有預設提問，可自行新增。</div>'}</div>${selectedDay===1?`<details class="card quiet-details"><summary>現場提問建議與研究數據注意事項</summary><div class="details-content"><p class="hint">${esc(IIS_FIELD_GUIDANCE.durationNote)}</p><p class="hint">${esc(IIS_FIELD_GUIDANCE.fieldTip)}</p><p class="hint"><strong>Q2 注意：</strong>${esc(IIS_FIELD_GUIDANCE.caution)}</p></div></details>`:''}<div class="card"><h2>其他現場筆記</h2><textarea rows="7" data-note="ask${selectedDay}" placeholder="其他補充、照片編號、與會人員、待辦……">${esc(db.notes['ask'+selectedDay]||'')}</textarea>${photoWidget('visit:'+selectedDay)}</div>`;
+ return `<div class="sectionhead"><h2>${displayDay(selectedDay)} 交流問題（${q.length} 題）</h2><button class="btn" data-action="edit-question" data-id="new">＋ 新增</button></div><div class="card"><strong>${esc(visitName)}</strong><p class="muted">依 11/17 最新準備資料：5 題自主噪音管理與政策層級備用提問。日方主導參訪議程，可視導覽與交流時間決定是否提問。</p><div class="hint">重點：${esc(topics)}</div><div class="actions"><button class="btn secondary smallbtn" data-action="export-visit" data-day="${selectedDay}">匯出本場紀錄 MD</button><button class="btn ghost smallbtn" data-action="copy-visit" data-day="${selectedDay}">複製紀錄</button></div></div>${questionEditor!==null?renderQuestionForm(questionEditor):''}
+ <div class="card">${q.length?q.map((v,i)=>`<div class="question"><div class="row" style="align-items:flex-start"><input type="checkbox" aria-label="此題已詢問" data-asked="${attr(v.id)}" ${v.asked?'checked':''}><div class="grow"><div class="row wrap"><span class="pill ${v.category==='extended'?'unconfirmed':'confirmed'}">${v.category==='extended'?'延伸議題':'主要議題'}</span>${v.priority?`<span class="pill">${esc(v.priority)}</span>`:''}${v.discussionTime?`<span class="mini-note">${esc(v.discussionTime)}</span>`:''}</div><div class="qa-title ${v.asked?'readonly':''}">${i+1}. ${esc(v.title||v.text)}</div></div></div>${v.title?`<details class="question-details"><summary>${v.background?'查看背景說明與完整提問':'查看完整問句與交流目的'}</summary>${v.background?`<p class="muted preline"><strong>背景說明：</strong>\n${esc(v.background)}</p>`:''}<p class="preline"><strong>${v.background?'想請教教授：':'原始問題：'}</strong>\n${esc(v.text)}</p>${v.purpose?`<p class="muted preline"><strong>希望帶回的政策資訊：</strong>${esc(v.purpose)}</p>`:''}</details>`:''}<div class="qa-input"><label for="answer-${attr(v.id)}">日方回答／技術數據</label><textarea id="answer-${attr(v.id)}" rows="3" data-qfield="answer" data-qid="${attr(v.id)}" placeholder="量測條件、降噪 dB、回答摘要……">${esc(v.answer||'')}</textarea></div><div class="qa-input"><label for="follow-${attr(v.id)}">後續追蹤事項</label><textarea id="follow-${attr(v.id)}" rows="2" data-qfield="followup" data-qid="${attr(v.id)}" placeholder="索取簡報、相關文獻、適用於臺灣的建議……">${esc(v.followup||'')}</textarea></div><div class="actions"><button class="btn secondary smallbtn" data-action="edit-question" data-id="${attr(v.id)}">修改問題</button><button class="btn danger smallbtn" data-action="delete-question" data-id="${attr(v.id)}">刪除</button></div></div>`).join(''):'<div class="empty">沒有預設提問，可自行新增。</div>'}</div><details class="card quiet-details"><summary>參訪流程、優先順序與提問建議</summary><div class="details-content"><p class="hint">${esc(TODA_POLICY_GUIDANCE.agenda)}</p><p class="hint">${esc(TODA_POLICY_GUIDANCE.order)}</p><p class="hint"><strong>只問一題時：</strong>${esc(TODA_POLICY_GUIDANCE.key)}</p><p class="hint"><strong>管理流程：</strong>${esc(TODA_POLICY_GUIDANCE.workflow)}</p><p class="hint">${esc(TODA_POLICY_GUIDANCE.context)}</p></div></details><div class="card"><h2>其他現場筆記</h2><textarea rows="7" data-note="ask${selectedDay}" placeholder="其他補充、照片編號、與會人員、待辦……">${esc(db.notes['ask'+selectedDay]||'')}</textarea>${photoWidget('visit:'+selectedDay)}</div>`;
 }
 function renderQuestionForm(id){const q=id==='new'?{text:''}:(db.questions[selectedDay]||[]).find(x=>x.id===id);return `<div class="card"><h2>${id==='new'?'新增提問':'修改提問'}</h2><form id="question-form" data-id="${attr(id)}"><textarea name="text" required placeholder="輸入想向日方提問的內容……">${esc(q?.text||'')}</textarea><div class="actions"><button class="btn" type="submit">儲存</button><button class="btn secondary" type="button" data-action="cancel-question">取消</button></div></form></div>`;}
 function isGiftGoal(s){return s.category==='gift'||(s.category!=='task'&&(s.id==='shop-3'||s.id==='shop-4'));}
