@@ -233,3 +233,13 @@ V2.9 附近探索增量更新（2026-11-13）
 - **相容遷移**：新 `SEED_REV` 會在舊版載入時移除兩場不再適用的**預設**題目；凡舊題曾勾選已問、輸入回答、後續追蹤或自行改寫者，內容不丟棄，轉入各場的「其他現場筆記」。原有自訂提問在戶田仍保留。切勿依題號把舊技術題答案移植到不同的新政策題。
 - 保留東大與戶田原 `notes.ask1/ask3`、`PhotoVault` 的 `visit:1/visit:3` 附件對應、正式集合行程、完成勾選實際時間、費用、探索、代購及 JSON／完整 ZIP 備份。日方正式時間與首頁倒數不變。
 - 版本標示仍為 V2.9，Service Worker 版本為 `tokyo-visit-v2.9-20261117-iis-results-toda-policy-r11`；此次只更動 `data.js`、`app.js`、`sw.js` 和兩份說明。
+
+
+## 2026/11/17｜首頁空白緊急修復（V2.9 熱修正）
+
+- 修復 PR #13 更改 `app.js` 時誤刪的兩個既有初始化函式 `safeLocalRead()` 與 `legacyUpgrade()`，原先造成啟動 `ReferenceError: safeLocalRead is not defined`，畫面只有標題與底部分頁而主區域空白。
+- 兩個函式直接從上一正常版本還原，**不變更 localStorage key、IndexedDB、PhotoVault、行程、參訪紀錄、代購或記帳資料**。
+- 新增啟動錯誤訊息和「重新載入手冊」按鈕，不會清除本機資料。
+- `index.html` 的 `data.js`、`app.js` 加快取版本參數，避免新舊腳本混用；`sw.js` 快取升級至 `tokyo-visit-v2.9-20261117-startup-repair-r12`。
+- 完整載入實際 `data.js`、`photos.js`、`explore.js`、`secret-shopping.js` 及 `app.js`，模擬啟動，乾淨安裝和舊資料升級皆成功顯示首頁內容；舊東大回答能歸檔保存。
+- iPhone 真機仍需人工確認。**勿刪除 PWA 或清除 Safari 網站資料**。
