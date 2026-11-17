@@ -7,7 +7,7 @@ const Explore=(function ExploreFactory(){
   0:[[0,'kanda'],[12,'haneda'],[15,'akihabara'],[18,'tokyo']],
   1:[[0,'kanda'],[9,'komaba'],[14,'ryogoku'],[16,'oshiage']],
   2:[[0,'kanda'],[9,'tsukiji'],[11,'daimon'],[18,'roppongi'],[20,'kanda']],
-  3:[[0,'kanda'],[6,'akihabara'],[7,'kenkyu'],[14,'akihabara'],[16,'ueno'],[19,'kanda']],
+  3:[[0,'kanda'],[6,'akihabara'],[7,'kenkyu'],[12,'akihabara'],[16,'kanda'],[17,'ueno'],[21,'kanda']],
   4:[[0,'kanda'],[11,'kunitachi'],[16,'kanda'],[19,'asakusa'],[21,'kanda']],
   5:[[0,'kanda'],[8,'mitaka'],[13,'harajuku'],[17,'tokyo'],[19,'kanda']],
   6:[[0,'kanda'],[10,'haneda']]
