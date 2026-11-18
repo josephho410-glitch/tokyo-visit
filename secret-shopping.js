@@ -48,7 +48,7 @@ const SecretShopping=(function SecretFactory(){
  {id:'surugaya',name:'駿河屋 秋葉原プラモデル館',date:'11/15 秋葉原',address:'東京都千代田区外神田4-4-2',hours:'週日參考 10:00–21:00'},
  {id:'donki',name:'ドン・キホーテ 秋葉原店',date:'11/15 秋葉原',address:'東京都千代田区外神田4-3-3',hours:'參考 24 小時'},
  {id:'yamashiroya',name:'ヤマシロヤ Yamashiroya',date:'11/18 上野',address:'東京都台東区上野6-14-6',hours:'參考 10:00–21:30',map:'https://maps.app.goo.gl/xLkqrYq516yJ9v3c7'},
- {id:'tinytiny',name:'tiny tiny ルミネエスト新宿店',date:'新宿需另行安排',address:'東京都新宿区新宿3-38-1',hours:'週末參考 10:30–21:00；平日 11:00–21:00'},
+ {id:'tinytiny',name:'tiny tiny ルミネエスト新宿店',date:'11/19 16:30–17:15 新宿',address:'東京都新宿区新宿3-38-1',hours:'平日參考 11:00–21:00'},
  {id:'uniqlo',name:'ユニクロ ヨドバシAkiba店',date:'11/15 秋葉原',address:'東京都千代田区神田花岡町1-1 ヨドバシAkiba 7F',hours:'參考 9:30–22:00（官方店面資料）'}
  ];
  const ITEMS=GROUPS.flatMap(g=>g.items.map(a=>({id:a[0],name:a[1],ja:a[2],where:a[3],shops:a[4]?a[4].split(','):[],target:a[0]==='m1'?2:null,optional:['m2','m3'].includes(a[0]),caution:SPECIAL[a[0]]||''})));
