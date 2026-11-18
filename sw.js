@@ -1,6 +1,6 @@
 /* Offline shell, network-first updates; never cache arbitrary external sites. */
-const CACHE='tokyo-visit-v2.9-20261119-itinerary-r15';
-const ASSETS=['./','./index.html','./styles.css','./data.js','./photos.js','./explore.js','./secret-shopping.js','./app.js','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
+const CACHE='tokyo-visit-v2.9-20261119-latest-itinerary-r16';
+const ASSETS=['./','./index.html','./styles.css','./data.js?v=20261119-r16','./photos.js','./explore.js','./secret-shopping.js?v=20261119-r16','./app.js?v=20261119-r16','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
 self.addEventListener('activate',event=>{event.waitUntil((async()=>{const keys=await caches.keys();await Promise.all(keys.filter(k=>k.startsWith('tokyo-visit-')&&k!==CACHE).map(k=>caches.delete(k)));await self.clients.claim()})())});
 self.addEventListener('message',event=>{if(event.data?.type==='SKIP_WAITING')self.skipWaiting()});
